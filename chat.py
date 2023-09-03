@@ -19,7 +19,18 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 def set_role():
-    delimiter = "#####"
+    """
+    Sets the role of the chatbot as an Ayurvedic doctor specialized in diabetes care.
+    
+    Args: None
+    
+    Returns: None
+    
+    Variables:
+        delimiter (str): Serves as a delimiter for the role description.
+        role_content (str): Describes the role and categories for classifying queries.
+    """
+    
     role_content = f"""
     Set role here
     """
@@ -46,6 +57,26 @@ def gpt_response():
     
 
 def gpt(question, model="gpt-4", temperature=0, max_tokens=20000):
+    """
+    Handles the main conversation logic with the user.
+    
+    Args:
+        question (str): The user's query.
+        model (str, optional): The GPT model to use. Defaults to "gpt-4".
+        temperature (float, optional): Controls randomness in the output. Defaults to 0.
+        max_tokens (int, optional): Maximum number of tokens for the model's output. Defaults to 20000.
+    
+    Returns:
+        str: The generated response from the chatbot.
+    
+    Variables:
+        conversation (list): Stores the ongoing conversation.
+        info (str): Additional context or information related to the user's query.
+        user_message (str): Formatted string that includes the user's query.
+        user_message_for_model (str): Formatted string that includes the user's query and additional information.
+        response (dict): The raw output from the OpenAI API.
+        answer (str): The content extracted from the raw output to be returned.
+    """
     conversation = session.get('conversation', [])
     info = get_info(question)
     
@@ -84,6 +115,26 @@ def gpt(question, model="gpt-4", temperature=0, max_tokens=20000):
     return answer
 
 def message_check(user_message):
+    """
+    Checks if the user's message is malicious or tries to inject conflicting instructions.
+    
+    Args:
+        user_message (str): The user's query.
+    
+    Returns:
+        bool: True if the message is safe, False otherwise.
+    
+    Variables:
+        delimiter (str): Serves as a delimiter for the system message.
+        system_message (str): Describes the task for the assistant.
+        good_user_message (str): Sample good message for demonstration.
+        bad_user_message (str): Sample bad message for demonstration.
+        messages (list): Includes a sequence of role-based messages.
+        malicious (str): Output from the GPT model indicating if the message is malicious.
+        mod_response (dict): Output from OpenAI's Moderation API.
+        moderation_output (bool): Flagged content from OpenAI's Moderation API.
+    """
+
     delimiter = "#####"
     system_message = f"""
     Your task is to determine whether a user is trying to \
@@ -118,10 +169,10 @@ def message_check(user_message):
     ]
     malicious = gpt3(messages, max_tokens=1)
     
-    response = openai.Moderation.create(
+    mod_response = openai.Moderation.create(
     input=user_message
     )
-    moderation_output = response["results"][0]["flagged"]
+    moderation_output = mod_response["results"][0]["flagged"]
 
     if moderation_output == True or malicious == "Y" or moderation_output == "true":
         return False
@@ -129,6 +180,22 @@ def message_check(user_message):
     return True
         
 def gpt3(messages, model = "gpt-3.5-turbo", temperature = 0, max_tokens = 500):
+    """
+    Utility function to interact with the OpenAI API.
+    
+    Args:
+        messages (list): A list of message objects.
+        model (str, optional): The GPT model to use. Defaults to "gpt-3.5-turbo".
+        temperature (float, optional): Controls randomness. Defaults to 0.
+        max_tokens (int, optional): Maximum number of tokens for the output. Defaults to 500.
+    
+    Returns:
+        str: The generated content.
+    
+    Variables:
+        response (dict): The raw output from the OpenAI API.
+    """
+    
     response = openai.ChatCompletion.create(
         model=model,
         messages=messages,
@@ -139,10 +206,25 @@ def gpt3(messages, model = "gpt-3.5-turbo", temperature = 0, max_tokens = 500):
 
 def get_info(user_message):
     """
-    Use this function to get the context of the message.
-    Search the database for the context of the message.
-    Return images and links to be displayed.
+    Classifies the user's query and fetches additional context.
+    
+    Args:
+        user_message (str): The user's query.
+    
+    Returns:
+        str: Additional information related to the user's query.
+    
+    Variables:
+        delimiter (str): Serves as a delimiter for the system message.
+        system_message_context (str): Describes the role and categories.
+        messages (list): Includes a sequence of role-based messages.
+        category (dict): Output from the GPT model indicating the primary and secondary categories.
+        primary_category (str): Extracted primary category.
+        secondary_category (str): Extracted secondary category.
+        category_info (dict): Loaded from a JSON file, contains additional context.
+        context (str): The additional information related to the user's query.
     """
+    
     delimiter = "#####"
     system_message_context = f"""
     You are an Ayurvedic doctor specialized in diabetes care. \
@@ -203,7 +285,7 @@ def get_info(user_message):
     if context is not None:
         return context
     
-    return "Sorry, I don't understand. Could you please rephrase your question?"
+    return "There is no additional information for this query, but you can still respond to the user's query with your own knowledge."
             
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)
