@@ -2,6 +2,18 @@
     "Diabetes Management": {
         "Blood sugar monitoring": {
             "name": "Blood sugar monitoring",
+            "Remedy 1": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
+            "Remedy 2": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
             "images": ["url1", "url2"],
             "links": ["link1", "link2"],
             "video": "video_url",
@@ -9,6 +21,18 @@
         },
         "Insulin management": {
             "name": "Insulin management",
+            "Remedy 1": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
+            "Remedy 2": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
             "images": ["url1", "url2"],
             "links": ["link1", "link2"],
             "video": "video_url",
