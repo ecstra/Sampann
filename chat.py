@@ -156,7 +156,6 @@ def set_context():
     # set context in database and return context
     return analyze_answers(answers_to_questions), 200
     
-
 @app.route('/getBotResponse', methods=['GET', 'POST'])
 def gpt_response():
     user_message = request.json.get('user_message')
@@ -164,7 +163,7 @@ def gpt_response():
     # return GPT Response
     return gpt(user_message)
 
-def gpt(question, model="gpt-4", temperature=0.3, max_tokens=4000):
+def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
     Handles the main conversation logic with the user.
     
@@ -341,7 +340,9 @@ def get_info(user_message):
     Classify each query into a primary category \
     and a secondary category. 
     Provide your output in json format with the \
-    keys: primary and secondary.
+    keys: primary and secondary. \
+    If the message does not fit a category, \
+    respond with "None" for both primary and secondary.
 
     Primary categories: Diabetes Management, Diet and Nutrition, \
     Herbal Remedies, or Lifestyle Changes.
@@ -389,7 +390,7 @@ def get_info(user_message):
 
     context = get_context_by_name(category_info, primary_category, secondary_category)
     
-    if context is not None:
+    if context is not None & primary_category != "None":
         return context
     
     return "There is no additional information for this query, but you can still respond to the user's query with your own knowledge."
