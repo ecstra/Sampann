@@ -11,6 +11,7 @@ from datetime import datetime as dt, timedelta
 from bs4 import BeautifulSoup
 from openai.error import OpenAIError
 from werkzeug.exceptions import HTTPException
+from collections import Counter
 
 load_dotenv()
 app = Flask(__name__)
@@ -39,6 +40,7 @@ def set_role():
     Add your own knowledge to the user message and the context and respond to the user's query adequately. \
     Make sure to make use of the additional information provided to you through context. \
     Make sure to not provide any links or images or videos which are not present in the context. \
+    Make sure to give a detailed and formatted response. \
     Here is a basic outline on how you should respond to the user's query: \
     1. Acknowledgement of User Query: \
         Briefly acknowledge the specific query from the user. \
@@ -57,6 +59,7 @@ def set_role():
         Tailor an ayurvedic diet chart according to the user's needs. \
         Mention foods to avoid and consume \
         Make them a meal timing plan \
+        Give them a full idea of what to eat and when to eat it \
     
     6. Resource Links: \
         Link to credible articles, research papers, or products for further information. (If and only if provided in context) \
@@ -86,6 +89,59 @@ def set_role():
     """
     session['conversation'] = [{"role": "system", "content": role_content}]
 
+def analyze_answers(answer_dict):
+    topics = {
+        'Physical': ['1', '2', '3'],
+        'Mental': ['4', '5', '6'],
+        'Social': ['7', '8'],
+        'Emotional': ['9'],
+        'Digestive': ['10', '11', '12'],
+    }
+    
+    option_labels = {
+        'a': 'Vata',
+        'b': 'Pitta',
+        'c': 'Kapha'
+    }
+    
+    analysis_results = {}
+    
+    for topic, questions in topics.items():
+        topic_counter = Counter()
+        
+        for question in questions:
+            if question in answer_dict:
+                topic_counter[answer_dict[question]] += 1
+                
+        total_answers = sum(topic_counter.values())
+        
+        percentage_dict = {}
+        
+        for option, count in topic_counter.items():
+            percentage = (count / total_answers) * 100
+            percentage_dict[option_labels[option]] = f"{percentage:.2f}%"
+        
+        if total_answers > 0:
+            max_count = max(topic_counter.values())
+            mostly_chosen_options = [option_labels[k] for k, v in topic_counter.items() if v == max_count]
+            
+            if len(mostly_chosen_options) == 1:
+                mostly_chosen = f"Mostly {mostly_chosen_options[0]}"
+            elif len(mostly_chosen_options) == 2:
+                mostly_chosen = f"Between {mostly_chosen_options[0]} and {mostly_chosen_options[1]}"
+            else:
+                mostly_chosen = "All-Rounded"
+        else:
+            mostly_chosen = "N/A"
+        
+        analysis_results[topic] = {
+            'You are': mostly_chosen,
+            'Distribution': percentage_dict
+        }
+    
+    json_results = json.dumps(analysis_results, indent=4)
+    return json_results
+
 @app.route('/setContext', methods=['GET', 'POST'])
 def set_context():
     """
@@ -95,18 +151,20 @@ def set_context():
     """
     answers_to_questions = request.json.get('QandA')
     set_role()
+    # login and append to database
     # ... Some Processing ...
     # set context in database and return context
-
+    return analyze_answers(answers_to_questions), 200
+    
 
 @app.route('/getBotResponse', methods=['GET', 'POST'])
 def gpt_response():
     user_message = request.json.get('user_message')
     # ... Some Processing ...
     # return GPT Response
-    
+    return gpt(user_message)
 
-def gpt(question, model="gpt-4", temperature=0.3, max_tokens=20000):
+def gpt(question, model="gpt-4", temperature=0.3, max_tokens=4000):
     """
     Handles the main conversation logic with the user.
     
@@ -141,7 +199,7 @@ def gpt(question, model="gpt-4", temperature=0.3, max_tokens=20000):
     """
     check = message_check(question)
     if check == False:
-        return "I apologise, but I'm unable to respond to that because of limitations on when I am authorised to do so."
+        return "I apologise, but I'm unable to respond to that because of limitations on when I am authorised to do so.", 421
     
     conversation.append({"role": "user", "content": user_message_for_model})
     try:
@@ -153,16 +211,15 @@ def gpt(question, model="gpt-4", temperature=0.3, max_tokens=20000):
         )
     except OpenAIError as e:
         if 'rate limit' in str(e):
-            'Rate limit exceeded. Please try again after a few seconds.', 'error'
-            return 'Rate limit exceeded. Please try again after a few seconds.', 420
+            return 'Rate limit exceeded. Please try again after a few seconds.', 422
         else:
-            flash('An error occurred. Please try again later.', 'error')
-            return redirect(url_for('home'))
+            return 'An error occurred. Please try again later.', 423
+            
         
     answer = response['choices'][0]['message']['content']
     conversation.append({"role": "assistant", "content": answer})
     session['conversation'] = conversation
-    return answer
+    return answer, 200
 
 def message_check(user_message):
     """
@@ -317,7 +374,7 @@ def get_info(user_message):
     'content': f"{delimiter}{user_message}{delimiter}"},  
     ]
     category = gpt3(messages)
-    
+    category = json.loads(category)
     primary_category = category["primary"]
     secondary_category = category["secondary"]
     

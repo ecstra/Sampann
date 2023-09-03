@@ -49,6 +49,18 @@
     "Diet and Nutrition": {
         "Meal Planning": {
             "name": "Meal Planning",
+            "Remedy 1": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
+            "Remedy 2": {
+                "name": "Remedy Name",
+                "images": ["url1", "url2"],
+                "links": ["link1", "link2"],
+                "video": "video_url"
+            },
             "images": ["url1", "url2"],
             "links": ["link1", "link2"],
             "video": "video_url",
