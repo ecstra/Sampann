@@ -1,0 +1,94 @@
+{
+    "Diabetes Management": {
+        "Blood sugar monitoring": {
+            "name": "Blood sugar monitoring",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Insulin management": {
+            "name": "Insulin management",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Medication advice": {
+            "name": "Medication advice",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        }
+    },
+    "Diet and Nutrition": {
+        "Meal Planning": {
+            "name": "Meal Planning",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Foods to avoid": {
+            "name": "Foods to avoid",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        " Nutritional supplements": {
+            "name": " Nutritional supplements",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        }
+    },
+    "Herbal Remedies": {
+        "Herbal treatments": {
+            "name": "Herbal treatments",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Ayurvedic medicines": {
+            "name": "Ayurvedic medicines",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Natural therapies": {
+            "name": "Natural therapies",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        }
+    },
+    "Lifestyle Changes": {
+        "Exercise and physical activity": {
+            "name": "Exercise and physical activity",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Stress management": {
+            "name": "Stress management",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        },
+        "Sleep quality": {
+            "name": "Sleep quality",
+            "images": ["url1", "url2"],
+            "links": ["link1", "link2"],
+            "video": "video_url",
+            "text": "Information text"
+        }
+    }
+}
