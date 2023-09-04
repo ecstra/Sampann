@@ -4,7 +4,6 @@
 Below are detailed instructions on how each API works in our backend and how the frontend developer can use them.
 
 
-
 ---
 
 ### 1. Login Page API
@@ -89,7 +88,7 @@ This API is used to establish the initial context for the chatbot based on user 
 
 #### Response Format
 
-- **Status Code**: `200 OK`
+- **Status Code**: `201 CREATED`
 - **Body**:
 
   ```json
