@@ -12,9 +12,12 @@ from bs4 import BeautifulSoup
 from openai.error import OpenAIError
 from werkzeug.exceptions import HTTPException
 from collections import Counter
+from user import app as user_app
+
 
 load_dotenv()
 app = Flask(__name__)
+app.register_blueprint(user_app, url_prefix='/user')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 

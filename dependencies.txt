@@ -1,0 +1,6 @@
+pymongo
+flask_mongoengine
+openai
+flask_sqlalchemy
+bs4
+python-dotenv
