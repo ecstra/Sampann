@@ -31,8 +31,8 @@ oauth = OAuth(app)
 
 google = oauth.remote_app(
     'google',
-    consumer_key='713498943522-pnk2ec5g0tfgd9l8dvi2krmmddns00em.apps.googleusercontent.com',
-    consumer_secret='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',
+    consumer_key=os.getenv('GOOGLE_KEY'),
+    consumer_secret=os.getenv('GOOGLE_SECRET'),
     request_token_params={
         'scope': 'email',
     },
