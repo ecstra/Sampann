@@ -8,3 +8,4 @@ Flask-Bcrypt
 Flask-Login
 Flask-OAuthlib
 gunicorn
+gevent
