@@ -3,6 +3,9 @@
 # Proprietary and confidential.
 
 # Standard library imports
+from gevent import monkey
+monkey.patch_all()
+
 from collections import Counter
 import json
 import os
