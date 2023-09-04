@@ -1,8 +1,4 @@
-# Usage of APIs
-
-
 Below are detailed instructions on how each API works in our backend and how the frontend developer can use them.
-
 
 ---
 
@@ -90,7 +86,6 @@ This API is used to establish the initial context for the chatbot based on user 
 
 - **Status Code**: `201 CREATED`
 - **Body**:
-
   ```json
   {
     "Physical": {
@@ -105,7 +100,7 @@ This API is used to establish the initial context for the chatbot based on user 
   }
   ```
 
-  #### Example Usage in Flutter (Set Context API)
+#### Example Usage in Flutter (Set Context API)
 
 ```dart
 final response = await http.post(
