@@ -218,7 +218,7 @@ def set_context():
     # Update MongoDB
     user_collection.update_one({'Username': username}, {'$set': analysis_results}, upsert=True)
     set_role()
-    return analysis_results, 200
+    return analysis_results, 201
 
 @app.route('/getBotResponse', methods=['GET', 'POST'])
 def gpt_response():
@@ -257,7 +257,7 @@ def authorized():
         return 'Access denied: reason={} error={}'.format(
             request.args['error_reason'],
             request.args['error_description']
-        )
+        ), 403
 
     session['google_token'] = (response['access_token'], '')
     me = google.get('userinfo')
@@ -270,9 +270,11 @@ def authorized():
         user_collection.update_one({'Username': new_username}, {'email': new_username}, {'$set': old_data}, upsert=True)
     
     session['username'] = new_username
-    session.pop('question_count', None)  # Reset question count on successful login
+    session.pop('question_count', None) # Reset question count on successful login
+    session.pop('conversation', []) # Reset conversation on successful login
+    set_role()
     
-    return 'Logged in as: ' + me.data['email']
+    return 'Logged in as: ' + me.data['email'], 200
 
 @google.tokengetter
 def get_google_oauth_token():
@@ -317,7 +319,7 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
     check = message_check(question)
     if check == False:
-        return "I apologise, but I'm unable to respond to that because of limitations on when I am authorised to do so.", 421
+        return "I apologise, but I'm unable to respond to that because of limitations on when I am authorised to do so.", 200
     
     conversation.append({"role": "user", "content": user_message_for_model})
     try:
@@ -329,9 +331,9 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
         )
     except OpenAIError as e:
         if 'rate limit' in str(e):
-            return 'Rate limit exceeded. Please try again after a few seconds.', 422
+            return 'Rate limit exceeded. Please try again after a few seconds.', 429
         else:
-            return 'An error occurred. Please try again later.', 423
+            return 'An error occurred. Please try again later.', 451
             
         
     answer = response['choices'][0]['message']['content']
