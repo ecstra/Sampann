@@ -2,23 +2,46 @@
 # Unauthorized copying of this file, via any medium is strictly prohibited.
 # Proprietary and confidential.
 
-from flask import Flask, request, session, redirect, url_for, flash, render_template, get_flashed_messages, send_from_directory
-import openai, json
-from flask_sqlalchemy import SQLAlchemy
-import os
-from dotenv import load_dotenv
-from datetime import datetime as dt, timedelta
-from bs4 import BeautifulSoup
-from openai.error import OpenAIError
-from werkzeug.exceptions import HTTPException
+# Standard library imports
 from collections import Counter
-from user import app as user_app
+import json
+import os
+from random import choice
+from string import ascii_letters, digits
 
+# Third-party imports
+from dotenv import load_dotenv
+from flask import Flask, request, session, url_for
+from flask_oauthlib.client import OAuth
+from openai import OpenAIError
+import openai
+from pymongo import MongoClient
+
+# Local imports
 load_dotenv()
+
+client = MongoClient(os.getenv('DATABASE_URL'))
+db = client[os.getenv('DATABASE_NAME')]
+user_collection = db['users']
+
 app = Flask(__name__)
-app.register_blueprint(user_app, url_prefix='/user')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
+oauth = OAuth(app)
+
+google = oauth.remote_app(
+    'google',
+    consumer_key='713498943522-pnk2ec5g0tfgd9l8dvi2krmmddns00em.apps.googleusercontent.com',
+    consumer_secret='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',
+    request_token_params={
+        'scope': 'email',
+    },
+    base_url='https://www.googleapis.com/oauth2/v1/',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+)
 
 def set_role():
     """
@@ -43,8 +66,9 @@ def set_role():
     Make sure to not provide any links or images or videos which are not present in the context. \
     Make sure to give a detailed and formatted response. \
     Here is a basic outline on how you should respond to the user's query: \
+    (You need not mention the headings for the content in your response and you can add your own extra content and headings as well if needed)
     1. Acknowledgement of User Query: \
-        Briefly acknowledge the specific query from the user. \
+        Briefly acknowledge the specific query from the user. Mention their Dosha type if provided. \
     
     2. Contextual Information: \
         Provide background information relevant to the query to ensure the user understands the underlying principles of the Ayurvedic approach. \
@@ -89,6 +113,13 @@ def set_role():
         Ayurvedic medicine suggestions \
         How and when to consume them \
         What are their effects \
+    
+    4. Performance and Information: \
+        If you have mentioned any methods or yagas or any other things, make sure to mention how to use them, \
+        what are their effects, \
+        what are their benefits, \
+        how to perform it step wise, \
+        and when and where to perform it. \
     """
     session['conversation'] = [{"role": "system", "content": role_content}]
 
@@ -143,28 +174,109 @@ def analyze_answers(answer_dict):
         }
     
     json_results = json.dumps(analysis_results, indent=4)
-    return json_results
+    return analysis_results
 
+def get_user_data(username):
+    user_data = user_collection.find_one({"Username": username})
+    
+    if user_data:
+        # Extract the specific data you are interested in
+        digestive_data = user_data.get("Digestive", {})
+        emotional_data = user_data.get("Emotional", {})
+        mental_data = user_data.get("Mental", {})
+        physical_data = user_data.get("Physical", {})
+        social_data = user_data.get("Social", {})
+        
+        # Now, these variables contain the respective data
+        # You can manipulate them as you wish
+        
+        return {
+            "Digestive": digestive_data,
+            "Emotional": emotional_data,
+            "Mental": mental_data,
+            "Physical": physical_data,
+            "Social": social_data
+        }
+        
+    else:
+        return "No data found for this username."
+    
 @app.route('/setContext', methods=['GET', 'POST'])
 def set_context():
-    """
-    Use this function to process QandA questions to set context.
-    Get username and append username: context to database.
-    Also create random username if user does not have one.
-    """
     answers_to_questions = request.json.get('QandA')
-    set_role()
-    # login and append to database
-    # ... Some Processing ...
-    # set context in database and return context
-    return analyze_answers(answers_to_questions), 200
+    username = session.get('username')
     
+    # Generate random username if not exists
+    if not username:
+        username = 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
+        session['username'] = username
+        session['question_count'] = 0  # Initialize question count for new user
+
+    analysis_results = analyze_answers(answers_to_questions)
+    session['analysis_results'] = analysis_results
+    
+    # Update MongoDB
+    user_collection.update_one({'Username': username}, {'$set': analysis_results}, upsert=True)
+    set_role()
+    return analysis_results, 200
+
 @app.route('/getBotResponse', methods=['GET', 'POST'])
 def gpt_response():
     user_message = request.json.get('user_message')
-    # ... Some Processing ...
-    # return GPT Response
-    return gpt(user_message)
+    username = session.get('username')
+    question_count = session.get('question_count')
+    
+    if not username:
+        return 'Please log in to continue', 401
+    
+    if username.startswith('randomlyGenerated'):
+        if question_count is not None and question_count >= 1:
+            return 'Please log in to continue', 401
+        else:
+            session['question_count'] = (question_count or 0) + 1  # Update question count
+
+    response = gpt(user_message)  # Your existing GPT function
+    return response
+
+@app.route('/login')
+def login():
+    return google.authorize(callback=url_for('authorized', _external=True))
+
+@app.route('/logout')
+def logout():
+    session.pop('google_token')
+    session.pop('conversation', None)
+    session.pop('username', None)
+    session.pop('question_count', None)
+    return 'Logged out', 200
+
+@app.route('/login/authorized')
+def authorized():
+    response = google.authorized_response()
+    if response is None or response.get('access_token') is None:
+        return 'Access denied: reason={} error={}'.format(
+            request.args['error_reason'],
+            request.args['error_description']
+        )
+
+    session['google_token'] = (response['access_token'], '')
+    me = google.get('userinfo')
+    new_username = me.data['email']
+    
+    old_username = session.get('username')
+    if old_username and old_username.startswith('randomlyGenerated'):
+        # Merge data from old_username to new_username
+        old_data = user_collection.find_one({'Username': old_username})
+        user_collection.update_one({'Username': new_username}, {'email': new_username}, {'$set': old_data}, upsert=True)
+    
+    session['username'] = new_username
+    session.pop('question_count', None)  # Reset question count on successful login
+    
+    return 'Logged in as: ' + me.data['email']
+
+@google.tokengetter
+def get_google_oauth_token():
+    return session.get('google_token')
 
 def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
@@ -189,11 +301,15 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
     conversation = session.get('conversation', [])
     info = get_info(question)
+    user_data = get_user_data(session.get('username'))
+    print(type(user_data))
     
     user_message = f"""Here is the user message: \
     {question} \
     And Here is some information on the topic context: \
-    {info}"""
+    {info} \
+    And Here is some more info about the user: \
+    {user_data}"""
     
     user_message_for_model = f"""User message, \
     remember that you respond only if the message is Ayurvedic or Medical related: \
@@ -393,10 +509,10 @@ def get_info(user_message):
 
     context = get_context_by_name(category_info, primary_category, secondary_category)
     
-    if context is not None & primary_category != "None":
+    if (context is not None) & (primary_category != "None"):
         return context
     
-    return "There is no additional information for this query, but you can still respond to the user's query with your own knowledge."
+    return "There is no additional information for this query, so respond to the user's query with your own knowledge. Make it very rich in information."
             
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)

@@ -20,7 +20,6 @@ db = MongoEngine(app)
 class Dosha(db.EmbeddedDocument):
     you_are = db.StringField(choices=['Mostly Vata', 'Mostly Pitta', 'Mostly Kapha', 'All-rounded'])
     distribution = db.DictField()
-    
     def validate_you_are(you_are):
         if you_are not in ['Mostly Vata', 'Mostly Pitta', 'Mostly Kapha', 'All-rounded']:
             raise ValidationErr("Invalid 'you_are' value. Must be one of 'Mostly Vata', 'Mostly Pitta', 'Mostly Kapha', 'All-rounded'")
@@ -48,6 +47,7 @@ def create_user():
             hashedPW=data['password'],
             physical=Dosha(**data['physical']),
             mental=Dosha(**data['mental']),
+            social=Dosha(**data['social']),
             emotional=Dosha(**data['emotional']),
             digestive=Dosha(**data['digestive'])
         )
@@ -68,12 +68,10 @@ def get_user(username):
             'hashedPW': user.hashedPW,
             'physical': user.physical.to_mongo(),
             'mental': user.mental.to_mongo(),
+            'social': user.social.to_mongo(),
             'emotional': user.emotional.to_mongo(),
             'digestive': user.digestive.to_mongo(),
         }
         return jsonify(user_data), 200
     else:
         return jsonify({'message': 'User not found'}), 404
-    
-if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8080)

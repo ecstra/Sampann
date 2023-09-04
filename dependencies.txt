@@ -4,3 +4,7 @@ openai
 flask_sqlalchemy
 bs4
 python-dotenv
+werkzeug
+Flask-Bcrypt
+Flask-Login
+Flask-OAuthlib
