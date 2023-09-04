@@ -1,6 +1,9 @@
 # Usage of APIs
 
+
 Below are detailed instructions on how each API works in our backend and how the frontend developer can use them.
+
+
 
 ---
 
@@ -88,6 +91,7 @@ This API is used to establish the initial context for the chatbot based on user 
 
 - **Status Code**: `200 OK`
 - **Body**:
+
   ```json
   {
     "Physical": {
@@ -101,6 +105,22 @@ This API is used to establish the initial context for the chatbot based on user 
     // ... other topics for 4 more categories
   }
   ```
+
+  #### Example Usage in Flutter (Set Context API)
+
+```dart
+final response = await http.post(
+  Uri.parse('http://backend_url/setContext'),
+  body: jsonEncode({
+    "QandA": {
+      "1": "a",
+      "2": "b",
+      // ... other quiz answers
+    }
+  }),
+  headers: {"Content-Type": "application/json"},
+);
+```
 
 ---
 
@@ -147,24 +167,6 @@ This API facilitates the core chat functionality. It takes a user message as inp
     "response": "Here is information about diabetes..."
   }
   ```
-
----
-
-#### Example Usage in Flutter (Set Context API)
-
-```dart
-final response = await http.post(
-  Uri.parse('http://backend_url/setContext'),
-  body: jsonEncode({
-    "QandA": {
-      "1": "a",
-      "2": "b",
-      // ... other quiz answers
-    }
-  }),
-  headers: {"Content-Type": "application/json"},
-);
-```
 
 #### Example Usage in Flutter (Get Bot Response API)
 
