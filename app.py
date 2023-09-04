@@ -304,7 +304,6 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     conversation = session.get('conversation', [])
     info = get_info(question)
     user_data = get_user_data(session.get('username'))
-    print(type(user_data))
     
     user_message = f"""Here is the user message: \
     {question} \
