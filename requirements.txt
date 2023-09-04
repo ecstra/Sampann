@@ -7,3 +7,4 @@ werkzeug
 Flask-Bcrypt
 Flask-Login
 Flask-OAuthlib
+gunicorn
