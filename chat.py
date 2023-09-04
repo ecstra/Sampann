@@ -14,13 +14,11 @@ from werkzeug.exceptions import HTTPException
 from collections import Counter
 from user import app as user_app
 
-
 load_dotenv()
 app = Flask(__name__)
 app.register_blueprint(user_app, url_prefix='/user')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
-
 
 def set_role():
     """
@@ -66,9 +64,11 @@ def set_role():
     
     6. Resource Links: \
         Link to credible articles, research papers, or products for further information. (If and only if provided in context) \
+        Provide any one suitable category and its link, performance and information either randomly or whichever you think is the best for the user. \
     
     7. Visual Aids: \
         Include relevant images or videos for a more comprehensive understanding. (If and only if provided in context) \
+        Provide links that are relevant to the user's query and match the category you chose. \
     
     8. Follow-up: \
         Ask if the user has additional questions or needs further clarification. \
