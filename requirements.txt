@@ -9,3 +9,6 @@ Flask-Login
 Flask-OAuthlib
 gunicorn
 gevent
+google-auth
+google-auth-oauthlib 
+google-auth-httplib2

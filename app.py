@@ -19,6 +19,8 @@ from flask_oauthlib.client import OAuth
 from openai import OpenAIError
 import openai
 from pymongo import MongoClient
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 # Local imports
 load_dotenv()
@@ -34,10 +36,12 @@ oauth = OAuth(app)
 
 google = oauth.remote_app(
     'google',
-    consumer_key=os.getenv('GOOGLE_KEY'),
-    consumer_secret=os.getenv('GOOGLE_SECRET'),
+    consumer_key=os.getenv('GOOGLE_KEY_ANDROID'),
+    consumer_secret=os.getenv('GOOGLE_SECRET_ANDROID'),
     request_token_params={
         'scope': 'email',
+        'access_type': 'offline',
+        'approval_prompt': 'force'
     },
     base_url='https://www.googleapis.com/oauth2/v1/',
     request_token_url=None,
@@ -278,6 +282,30 @@ def authorized():
     set_role()
     
     return 'Logged in as: ' + me.data['email'], 200
+
+@app.route('/android_login', methods=['POST'])
+def android_login():
+    try:
+        # Get the token sent from the Android app
+        token = request.json.get('id_token')
+
+        # Specify the CLIENT_ID of the app that accesses the backend:
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_KEY_ANDROID'))
+
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Wrong issuer.')
+
+        # ID token is valid. Get the user's Google Account ID from the decoded token.
+        google_id = idinfo['sub']
+        email = idinfo.get('email')
+        
+        # You can proceed with creating a user session or whatever your app logic is
+        session['username'] = email  # or google_id or whatever you prefer
+
+        return 'Logged in successfully', 200
+    except ValueError:
+        # Invalid token
+        return 'Invalid token', 403
 
 @google.tokengetter
 def get_google_oauth_token():
