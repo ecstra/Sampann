@@ -36,12 +36,10 @@ oauth = OAuth(app)
 
 google = oauth.remote_app(
     'google',
-    consumer_key=os.getenv('GOOGLE_KEY_ANDROID'),
-    consumer_secret=os.getenv('GOOGLE_SECRET_ANDROID'),
+    consumer_key=os.getenv('GOOGLE_KEY'),
+    consumer_secret=os.getenv('GOOGLE_SECRET'),
     request_token_params={
         'scope': 'email',
-        'access_type': 'offline',
-        'approval_prompt': 'force'
     },
     base_url='https://www.googleapis.com/oauth2/v1/',
     request_token_url=None,
