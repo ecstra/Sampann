@@ -283,6 +283,7 @@ def authorized():
 def android_login():
     # Some Processing
     user_data = request.json.get()
+    print(user_data)
     return user_data, 200
 
 @google.tokengetter
