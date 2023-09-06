@@ -282,7 +282,7 @@ def authorized():
 @app.route('/android_login', methods=['POST'])
 def android_login():
     # Some Processing
-    user_data = jsonify()
+    user_data = request.json.get()
     return user_data, 200
 
 @google.tokengetter
