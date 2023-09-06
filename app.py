@@ -14,13 +14,11 @@ from string import ascii_letters, digits
 
 # Third-party imports
 from dotenv import load_dotenv
-from flask import Flask, request, session, url_for
+from flask import Flask, request, session, url_for, jsonify
 from flask_oauthlib.client import OAuth
 from openai import OpenAIError
 import openai
 from pymongo import MongoClient
-from google.oauth2 import id_token
-from google.auth.transport import requests
 
 # Local imports
 load_dotenv()
@@ -283,27 +281,9 @@ def authorized():
 
 @app.route('/android_login', methods=['POST'])
 def android_login():
-    try:
-        # Get the token sent from the Android app
-        token = request.json.get('id_token')
-
-        # Specify the CLIENT_ID of the app that accesses the backend:
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), os.getenv('GOOGLE_KEY_ANDROID'))
-
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Wrong issuer.')
-
-        # ID token is valid. Get the user's Google Account ID from the decoded token.
-        google_id = idinfo['sub']
-        email = idinfo.get('email')
-        
-        # You can proceed with creating a user session or whatever your app logic is
-        session['username'] = email  # or google_id or whatever you prefer
-
-        return 'Logged in successfully', 200
-    except ValueError:
-        # Invalid token
-        return 'Invalid token', 403
+    # Some Processing
+    user_data = jsonify()
+    return user_data, 200
 
 @google.tokengetter
 def get_google_oauth_token():
