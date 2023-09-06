@@ -270,7 +270,7 @@ def authorized():
     if old_username and old_username.startswith('randomlyGenerated'):
         # Merge data from old_username to new_username
         old_data = user_collection.find_one({'Username': old_username})
-        user_collection.update_one({'Username': new_username}, {'email': new_username}, {'$set': old_data}, upsert=True)
+        user_collection.update_one({'Username': new_username}, {'$set': old_data}, upsert=True)
     
     session['username'] = new_username
     session.pop('question_count', None) # Reset question count on successful login
