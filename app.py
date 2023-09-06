@@ -281,10 +281,11 @@ def authorized():
 
 @app.route('/android_login', methods=['POST'])
 def android_login():
-    # Some Processing
-    user_data = request.json.get("username")
-    print(user_data)
-    return user_data, 200
+    username = request.json.get("username")
+    phone_number = request.json.get("phonenumber")
+    email = request.json.get("email")
+    isEmailVerified = request.json.get("isEmailVerified")
+    return username + "logged in. Details are: " + [username, phone_number, email, isEmailVerified], 200
 
 @google.tokengetter
 def get_google_oauth_token():
