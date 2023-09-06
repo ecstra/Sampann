@@ -285,7 +285,8 @@ def android_login():
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
-    return username + "logged in. Details are: " + username + phone_number + email + isEmailVerified, 200
+    lsd = {"Username" : username, "Phone Number" : phone_number, "Email" : email, "EmailVerification" : isEmailVerified}
+    return f"{username} logged in. Details are: {lsd}", 200
 
 @google.tokengetter
 def get_google_oauth_token():
