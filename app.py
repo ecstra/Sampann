@@ -281,13 +281,38 @@ def authorized():
 
 @app.route('/android_login', methods=['POST'])
 def android_login():
-    username = request.json.get("username")
+    new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
-    lsd = {"Username" : username, "Phone Number" : phone_number, "Email" : email, "EmailVerification" : isEmailVerified}
-    print(f"{username} logged in. Details are: {lsd}")
-    return "Authorized", 200
+    old_username = session.get('username')
+    
+    if old_username and old_username.startswith('randomlyGenerated'):
+        # Fetch old data from the database
+        old_data = user_collection.find_one({'Username': old_username}) or {}
+        
+        # Prepare the new data to be updated
+        new_data = {
+            'Username': new_username,
+            'phone_number': session.get('phone_number', phone_number),  # Get from session, fallback to request data
+            'email': session.get('email', email),  # Get from session, fallback to request data
+            'isEmailVerified': session.get('isEmailVerified', isEmailVerified)  # Get from session, fallback to request data
+        }
+
+        # Merge the old and new data
+        merged_data = {**old_data, **new_data}
+        
+        # Update the MongoDB record
+        user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+    
+    # Update the session
+    session['username'] = new_username
+    session['phone_number'] = phone_number
+    session['email'] = email
+    session['isEmailVerified'] = isEmailVerified
+    session.pop('question_count', None)  # Reset question count on successful login
+    session.pop('conversation', None)  # Reset conversation on successful login
+    return 'Logged in as: ' + new_username, 200
 
 @google.tokengetter
 def get_google_oauth_token():
