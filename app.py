@@ -301,6 +301,9 @@ def android_login():
 
         # Merge the old and new data
         merged_data = {**old_data, **new_data}
+
+        # Remove the _id field from merged_data to avoid duplicate key error
+        merged_data.pop('_id', None)
         
         # Update the MongoDB record
         user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
@@ -313,6 +316,7 @@ def android_login():
     session.pop('question_count', None)  # Reset question count on successful login
     session.pop('conversation', None)  # Reset conversation on successful login
     return 'Logged in as: ' + new_username, 200
+
 
 @google.tokengetter
 def get_google_oauth_token():
