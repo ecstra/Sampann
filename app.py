@@ -282,7 +282,7 @@ def authorized():
 @app.route('/android_login', methods=['POST'])
 def android_login():
     # Some Processing
-    user_data = request.json.get()
+    user_data = request.json.get("username")
     print(user_data)
     return user_data, 200
 
