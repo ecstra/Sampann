@@ -1,3 +1,4 @@
+
 Below are detailed instructions on how each API works in our backend and how the frontend developer can use them.
 
 ---
@@ -171,6 +172,72 @@ final response = await http.post(
   headers: {"Content-Type": "application/json"},
 );
 ```
+
+---
+
+### 5. Android Login API
+
+#### API Endpoint
+
+- **URL**: `/android_login`
+- **Method**: `POST`
+
+#### Description:
+
+This API enables login functionality specifically for Android applications. It takes the user's username, phone number, email, and email verification status as input and updates or creates a record in the database. It also updates the user session with the same details.
+
+#### How It Works:
+
+1. The frontend sends a POST request containing the user's login information such as username, phone number, email, and email verification status.
+2. The backend checks if the username exists in the session and has a prefix of 'randomlyGenerated'.
+3. If so, it fetches the existing user data from the MongoDB database and merges it with the new data provided.
+4. If the username doesn't exist or doesn't have the said prefix, a new user record is created.
+5. The session details are updated, and the previous conversation and question count are reset.
+
+#### Request Format
+
+- **Header**:
+
+  ```json
+  {
+    "Content-Type": "application/json"
+  }
+  ```
+- **Body**:
+
+  ```json
+  {
+    "username": "JohnDoe",
+    "phonenumber": "1234567890",
+    "email": "john.doe@example.com",
+    "isEmailVerified": true
+  }
+  ```
+
+#### Response Format
+
+- **Status Code**: `200 OK`
+- **Body**:
+  ```text
+  "Logged in as: JohnDoe"
+  ```
+
+#### Example Usage in Flutter (Android Login API)
+
+```dart
+final response = await http.post(
+  Uri.parse('http://backend_url/android_login'),
+  body: jsonEncode({
+    "username": "JohnDoe",
+    "phonenumber": "1234567890",
+    "email": "john.doe@example.com",
+    "isEmailVerified": true
+  }),
+  headers: {"Content-Type": "application/json"},
+);
+```
+
+---
 
 These general formats should help guide the frontend developer in making API requests to the backend.
 -----------------------------------------------------------------------------------------------------
