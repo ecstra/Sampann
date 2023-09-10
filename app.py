@@ -315,8 +315,9 @@ def android_login():
     session['isEmailVerified'] = isEmailVerified
     session.pop('question_count', None)  # Reset question count on successful login
     session.pop('conversation', None)  # Reset conversation on successful login
+    set_role()
+    
     return 'Logged in as: ' + new_username, 200
-
 
 @google.tokengetter
 def get_google_oauth_token():
