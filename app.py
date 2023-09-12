@@ -280,7 +280,7 @@ def android_login():
 def firebase_login():
     old_username = get_jwt_identity()  # Get the old JWT identity
     uid = request.json.get("uid")
-    cred = credentials.Certificate(os.getenv('FIREBASE_CREDENTIALS'))
+    cred = credentials.Certificate({os.getenv('FIREBASE_CREDENTIALS')})
     default_app = firebase_admin.initialize_app(cred)
     user = auth.get_user(uid)
     new_username = user.display_name
