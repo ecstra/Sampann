@@ -37,7 +37,7 @@ user_collection = db['users']
 
 app = Flask(__name__)
 CORS(app)
-app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)  # set the token expiration time
 jwt = JWTManager(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
