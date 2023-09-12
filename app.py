@@ -157,27 +157,22 @@ def get_user_data(username):
     user_data = user_collection.find_one({"Username": username})
     
     if user_data:
-        # Extract the specific data you are interested in
-        digestive_data = user_data.get("Digestive", {})
-        emotional_data = user_data.get("Emotional", {})
-        mental_data = user_data.get("Mental", {})
-        physical_data = user_data.get("Physical", {})
-        social_data = user_data.get("Social", {})
+        vata_data = user_data.get("Vata", {})
+        pitta_data = user_data.get("Pitta", {})
+        kapha_data = user_data.get("Kapha", {})
         
         # Now, these variables contain the respective data
         # You can manipulate them as you wish
         
         return {
-            "Digestive": digestive_data,
-            "Emotional": emotional_data,
-            "Mental": mental_data,
-            "Physical": physical_data,
-            "Social": social_data
+            "Vata": vata_data,
+            "Pitta": pitta_data,
+            "Kapha": kapha_data
         }
         
     else:
         return "No data found for this username."
-    
+
 # Function to get or generate a username
 def get_or_generate_username(current_user):
     return current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
@@ -209,23 +204,35 @@ def set_context():
 @app.route('/getBotResponse', methods=['POST'])
 def get_bot_response():
     verify_jwt_in_request()  # No optional=True, so it will enforce JWT presence
-    current_user = get_jwt_identity()
-    username = get_or_generate_username(current_user)
-
+    username = get_jwt_identity()
     user_message = request.json.get('user_message')
 
     # Check user limit and system context from MongoDB
     user_data = user_collection.find_one({"Username": username})
     if user_data:
-        if user_data.get("question_count", 0) >= 1 and current_user.startswith('randomlyGenerated'):
+        conversation = user_data.get('conversation', [])
+        role_content = user_data.get('role', None)
+        username = user_data.get('Username', None)
+        if role_content:
+            conversation.insert(0, {"role": "system", "content": role_content})
+        if user_data.get("question_count", 0) >= 1 and username.startswith('randomlyGenerated'):
             return 'Please log in to continue', 401
-
+    
+    dosha = {}   
+    
+    if username is not None:
+        dosha = get_user_data(username)
+        
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
     user_collection.update_one({'Username': username}, {'$set': {'question_count': new_count}}, upsert=True)
 
     # Your existing GPT function to get a response
-    response, status_code = gpt(user_message)  # Make sure to include system_context in your GPT function
+    response, status_code = gpt(dosha, user_message, conversation=conversation)
+    
+    # Update conversation in MongoDB
+    conversation.append({"role": "assistant", "content": response})
+    user_collection.update_one({'Username': username}, {'$set': {'conversation': conversation}}, upsert=True)
     return jsonify(response=response, status=status_code)
 
 @app.route('/logout')
@@ -289,61 +296,8 @@ def android_login():
 
     return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
 
-@app.route('/token/refresh', methods=['POST'])
-@jwt_required(refresh=True)
-def refresh():
-    current_user = get_jwt_identity()
-    new_token = create_access_token(identity=current_user)
-    return jsonify(access_token=new_token), 200
 
-@app.route('/verify_google_token', methods=['POST'])
-@jwt_required()
-def verify_google_token():
-    try:
-        # (Receive token by HTTPS POST)
-        token = request.json.get('idtoken')
-        
-        # Specify the CLIENT_ID of the app that accesses the backend:
-        CLIENT_ID = "728781754591-pqdffgcuql5q0o4d1270frs8cu80sfov.apps.googleusercontent.com"
-        
-        # Validate the token
-        idinfo = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID)
-        
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Wrong issuer.')
-        
-        # ID token is valid. Extract the necessary information
-        google_userid = idinfo['sub']
-        email = idinfo['email']
-        name = idinfo['name']
-        username = idinfo.get('preferred_username', name)  # Using 'name' as fallback
-        phone_number = idinfo.get('phone_number', '')  # Assuming phone number exists in the token
-        
-        # Here you can update this info in your database as before
-        old_username = get_jwt_identity()  # Get the old JWT identity (randomly generated username)
-        old_data = user_collection.find_one({'Username': old_username}) or {}
-        
-        new_data = {
-            'Name': name,
-            'Username': username,
-            'Email': email,
-            'PhoneNumber': phone_number,
-            'GoogleUserID': google_userid
-        }
-        
-        merged_data = {**old_data, **new_data}
-        merged_data.pop('_id', None)
-        
-        user_collection.delete_one({'Username': old_username})
-        user_collection.update_one({'Username': username}, {'$set': merged_data}, upsert=True)
-        
-        return jsonify(status='success', message=f'Logged in as: {name}'), 200
-        
-    except ValueError:
-        # Invalid token
-        return jsonify(status='failure', message='Invalid token'), 401
-
-def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
+def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
     Handles the main conversation logic with the user.
     
@@ -364,10 +318,7 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
         response (dict): The raw output from the OpenAI API.
         answer (str): The content extracted from the raw output to be returned.
     """
-    conversation = session.get('conversation', [])
     info = get_info(question)
-    user_data = get_user_data(session.get('username'))
-    
     user_message = f"""Here is the user message: \
     {question} \
     And Here is some information on the topic context: \
@@ -399,8 +350,6 @@ def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
             
         
     answer = response['choices'][0]['message']['content']
-    conversation.append({"role": "assistant", "content": answer})
-    session['conversation'] = conversation
     return answer, 200
 
 def message_check(user_message):
