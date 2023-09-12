@@ -254,15 +254,15 @@ def refresh_token():
 @jwt_required()  # JWT is now required
 def android_login():
     old_username = get_jwt_identity()  # Get the old JWT identity
-    
+
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
-    
+
     # Fetch old data from the database
     old_data = user_collection.find_one({'Username': old_username}) or {}
-    
+
     # Prepare the new data to be updated
     new_data = {
         'Username': new_username,
@@ -277,14 +277,17 @@ def android_login():
     # Remove the _id and old Username fields from merged_data to avoid duplicate key error
     merged_data.pop('_id', None)
     merged_data.pop('Username', None)
-    
+
     # Remove the old record
     user_collection.delete_one({'Username': old_username})
 
     # Insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
-    
-    return jsonify(status='success', message=f'Logged in as: {new_username}'), 200
+
+    # Create a new access token with the new username
+    new_access_token = create_access_token(identity=new_username)
+
+    return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
 
 @app.route('/token/refresh', methods=['POST'])
 @jwt_required(refresh=True)
