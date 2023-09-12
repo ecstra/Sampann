@@ -22,8 +22,9 @@ import openai
 from pymongo import MongoClient
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token
-from google.oauth2 import id_token
-from google.auth.transport import requests
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import auth
 
 
 
@@ -174,7 +175,6 @@ def set_context():
     
     return jsonify(analysis_results=analysis_results, status=201)
 
-
 # Endpoint for getting bot response
 @jwt_required()  # Removed optional=True to make JWT mandatory
 @app.route('/getBotResponse', methods=['POST'])
@@ -275,6 +275,47 @@ def android_login():
 
     return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
 
+@app.route('/firebase_login', methods=['POST'])
+@jwt_required()  
+def firebase_login():
+    old_username = get_jwt_identity()  # Get the old JWT identity
+    uid = request.json.get("uid")
+    cred = credentials.Certificate()
+    default_app = firebase_admin.initialize_app(cred)
+    user = auth.get_user(uid)
+    new_username = user.display_name
+    phone_number = user.phone_number
+    email = user.email
+    isEmailVerified = user.email_verified
+
+    # Fetch old data from the database
+    old_data = user_collection.find_one({'Username': old_username}) or {}
+
+    # Prepare the new data to be updated
+    new_data = {
+        'Username': new_username,
+        'phone_number': phone_number,
+        'email': email,
+        'isEmailVerified': isEmailVerified
+    }
+
+    # Merge the old and new data
+    merged_data = {**old_data, **new_data}
+
+    # Remove the _id and old Username fields from merged_data to avoid duplicate key error
+    merged_data.pop('_id', None)
+    merged_data.pop('Username', None)
+
+    # Remove the old record
+    user_collection.delete_one({'Username': old_username})
+
+    # Insert new record with new username
+    user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+
+    # Create a new access token with the new username
+    new_access_token = create_access_token(identity=new_username)
+
+    return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
 
 def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_tokens=4000):
     """

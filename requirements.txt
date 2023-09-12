@@ -14,3 +14,4 @@ google-auth-oauthlib
 google-auth-httplib2
 Flask-JWT-Extended
 flask_cors
+firebase_admin
