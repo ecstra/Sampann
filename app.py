@@ -201,10 +201,10 @@ def set_context():
 
 
 # Endpoint for getting bot response
-@jwt_required(optional=True)
+@jwt_required()  # Removed optional=True to make JWT mandatory
 @app.route('/getBotResponse', methods=['POST'])
 def get_bot_response():
-    verify_jwt_in_request(optional=True)
+    verify_jwt_in_request()  # No optional=True, so it will enforce JWT presence
     current_user = get_jwt_identity()
     username = get_or_generate_username(current_user)
 
@@ -213,14 +213,14 @@ def get_bot_response():
     # Check user limit and system context from MongoDB
     user_data = user_collection.find_one({"Username": username})
     if user_data:
-        if user_data.get("question_count", 0) >= 1 and (not current_user or current_user.startswith('randomlyGenerated')):
+        if user_data.get("question_count", 0) >= 1 and current_user.startswith('randomlyGenerated'):
             return 'Please log in to continue', 401
 
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
     user_collection.update_one({'Username': username}, {'$set': {'question_count': new_count}}, upsert=True)
 
-    # Your existing GPT function to get response
+    # Your existing GPT function to get a response
     response, status_code = gpt(user_message)  # Make sure to include system_context in your GPT function
     return jsonify(response=response, status=status_code)
 
@@ -233,14 +233,17 @@ def logout():
     return 'Logged out', 200
 
 @app.route('/android_login', methods=['POST'])
+@jwt_required()  # JWT is now required
 def android_login():
+    old_username = get_jwt_identity()  # Get the old JWT identity (randomly generated username)
+    
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
     
     # Fetch old data from the database
-    old_data = user_collection.find_one({'Username': new_username}) or {}
+    old_data = user_collection.find_one({'Username': old_username}) or {}
     
     # Prepare the new data to be updated
     new_data = {
@@ -253,16 +256,17 @@ def android_login():
     # Merge the old and new data
     merged_data = {**old_data, **new_data}
 
-    # Remove the _id field from merged_data to avoid duplicate key error
+    # Remove the _id and old Username fields from merged_data to avoid duplicate key error
     merged_data.pop('_id', None)
+    merged_data.pop('Username', None)
     
-    # Update the MongoDB record
+    # Remove the old record
+    user_collection.delete_one({'Username': old_username})
+
+    # Insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
     
-    # Generate JWT token
-    access_token = create_access_token(identity=new_username)
-    
-    return jsonify(status='success', message=f'Logged in as: {new_username}', access_token=access_token), 200
+    return jsonify(status='success', message=f'Logged in as: {new_username}'), 200
 
 def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
