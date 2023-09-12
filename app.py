@@ -174,19 +174,26 @@ def get_user_data(username):
     else:
         return "No data found for this username."
     
+def get_or_generate_username(current_user):
+    return current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
+
+# Endpoint for setting context
 @jwt_required(optional=True)
 @app.route('/setContext', methods=['POST'])
 def set_context():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    username = current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
+    username = get_or_generate_username(current_user)
 
     answers_to_questions = request.json.get('QandA')
     analysis_results = analyze_answers(answers_to_questions)
 
-    # Update MongoDB
-    user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'context_set': True}}, upsert=True)
     set_role()
+    system_context = "Your system context here"  # Replace with the actual system context
+
+    # Update MongoDB
+    user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'system_context': system_context, 'context_set': True}}, upsert=True)
+
     return jsonify(analysis_results=analysis_results, status=201)
 
 # Endpoint for getting bot response
@@ -195,20 +202,26 @@ def set_context():
 def get_bot_response():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    user_message = request.json.get('user_message')
-    username = current_user or request.remote_addr
+    username = get_or_generate_username(current_user)
 
-    # Check user limit from MongoDB
+    user_message = request.json.get('user_message')
+
+    # Check user limit and system context from MongoDB
     user_data = user_collection.find_one({"Username": username})
-    if user_data and user_data.get("question_count", 0) >= 1 and not current_user:
-        return 'Please log in to continue', 401
+    if user_data:
+        if user_data.get("question_count", 0) >= 1 and not current_user:
+            return 'Please log in to continue', 401
+
+        system_context = user_data.get("system_context", "")
+    else:
+        system_context = ""
 
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
     user_collection.update_one({'Username': username}, {'$set': {'question_count': new_count}}, upsert=True)
 
     # Your existing GPT function to get response
-    response = gpt(user_message)
+    response = gpt(user_message, system_context)  # Make sure to include system_context in your GPT function
     return jsonify(response=response, status=200)
 
 @app.route('/logout')
