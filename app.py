@@ -19,6 +19,10 @@ from flask_oauthlib.client import OAuth
 from openai import OpenAIError
 import openai
 from pymongo import MongoClient
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, jwt_optional
+
+
 
 # Local imports
 load_dotenv()
@@ -28,23 +32,11 @@ db = client[os.getenv('DATABASE_NAME')]
 user_collection = db['users']
 
 app = Flask(__name__)
+CORS(app)
+app.config['JWT_SECRET_KEY'] = 'your-secret-key-here'
+jwt = JWTManager(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
-oauth = OAuth(app)
-
-google = oauth.remote_app(
-    'google',
-    consumer_key=os.getenv('GOOGLE_KEY'),
-    consumer_secret=os.getenv('GOOGLE_SECRET'),
-    request_token_params={
-        'scope': 'email',
-    },
-    base_url='https://www.googleapis.com/oauth2/v1/',
-    request_token_url=None,
-    access_token_method='POST',
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-)
 
 def set_role():
     """
@@ -141,43 +133,21 @@ def analyze_answers(answer_dict):
         'c': 'Kapha'
     }
     
-    analysis_results = {}
+    overall_counter = Counter()
     
     for topic, questions in topics.items():
-        topic_counter = Counter()
-        
         for question in questions:
             if question in answer_dict:
-                topic_counter[answer_dict[question]] += 1
+                overall_counter[answer_dict[question]] += 1
                 
-        total_answers = sum(topic_counter.values())
-        
-        percentage_dict = {}
-        
-        for option, count in topic_counter.items():
-            percentage = (count / total_answers) * 100
-            percentage_dict[option_labels[option]] = f"{percentage:.2f}%"
-        
-        if total_answers > 0:
-            max_count = max(topic_counter.values())
-            mostly_chosen_options = [option_labels[k] for k, v in topic_counter.items() if v == max_count]
-            
-            if len(mostly_chosen_options) == 1:
-                mostly_chosen = f"Mostly {mostly_chosen_options[0]}"
-            elif len(mostly_chosen_options) == 2:
-                mostly_chosen = f"Between {mostly_chosen_options[0]} and {mostly_chosen_options[1]}"
-            else:
-                mostly_chosen = "All-Rounded"
-        else:
-            mostly_chosen = "N/A"
-        
-        analysis_results[topic] = {
-            'You are': mostly_chosen,
-            'Distribution': percentage_dict
-        }
+    total_answers = sum(overall_counter.values())
+    percentage_dict = {}
     
-    json_results = json.dumps(analysis_results, indent=4)
-    return analysis_results
+    for option, count in overall_counter.items():
+        percentage = (count / total_answers) * 100
+        percentage_dict[option_labels[option]] = f"{percentage:.2f}%"
+        
+    return percentage_dict
 
 def get_user_data(username):
     user_data = user_collection.find_one({"Username": username})
@@ -204,46 +174,38 @@ def get_user_data(username):
     else:
         return "No data found for this username."
     
+@jwt_optional
 @app.route('/setContext', methods=['GET', 'POST'])
 def set_context():
+    current_user = get_jwt_identity()  # None if not authenticated
     answers_to_questions = request.json.get('QandA')
-    username = session.get('username')
+    username = current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
     
-    # Generate random username if not exists
-    if not username:
-        username = 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
-        session['username'] = username
-        session['question_count'] = 0  # Initialize question count for new user
-
     analysis_results = analyze_answers(answers_to_questions)
     session['analysis_results'] = analysis_results
     
     # Update MongoDB
     user_collection.update_one({'Username': username}, {'$set': analysis_results}, upsert=True)
     set_role()
-    return analysis_results, 201
+    return jsonify(analysis_results=analysis_results, status=201)
 
 @app.route('/getBotResponse', methods=['GET', 'POST'])
+@jwt_optional  # This allows the route to work even if JWT token is not provided
 def gpt_response():
+    current_user = get_jwt_identity()  # Get the current user from the JWT token
     user_message = request.json.get('user_message')
-    username = session.get('username')
-    question_count = session.get('question_count')
-    
-    if not username:
-        return 'Please log in to continue', 401
-    
-    if username.startswith('randomlyGenerated'):
-        if question_count is not None and question_count >= 1:
+    question_count = request.json.get('question_count', 0)  # Get the question count from the request
+
+    if not current_user:
+        if question_count >= 1:
             return 'Please log in to continue', 401
-        else:
-            session['question_count'] = (question_count or 0) + 1  # Update question count
+    else:
+        if current_user.startswith('randomlyGenerated'):
+            if question_count >= 1:
+                return 'Please log in to continue', 401
 
     response = gpt(user_message)  # Your existing GPT function
     return response
-
-@app.route('/login')
-def login():
-    return google.authorize(callback=url_for('authorized', _external=True))
 
 @app.route('/logout')
 def logout():
@@ -253,75 +215,37 @@ def logout():
     session.pop('question_count', None)
     return 'Logged out', 200
 
-@app.route('/login/authorized')
-def authorized():
-    response = google.authorized_response()
-    if response is None or response.get('access_token') is None:
-        return 'Access denied: reason={} error={}'.format(
-            request.args['error_reason'],
-            request.args['error_description']
-        ), 403
-
-    session['google_token'] = (response['access_token'], '')
-    me = google.get('userinfo')
-    new_username = me.data['email']
-    
-    old_username = session.get('username')
-    if old_username and old_username.startswith('randomlyGenerated'):
-        # Merge data from old_username to new_username
-        old_data = user_collection.find_one({'Username': old_username})
-        user_collection.update_one({'Username': new_username}, {'$set': old_data}, upsert=True)
-    
-    session['username'] = new_username
-    session.pop('question_count', None) # Reset question count on successful login
-    session.pop('conversation', []) # Reset conversation on successful login
-    set_role()
-    
-    return 'Logged in as: ' + me.data['email'], 200
-
 @app.route('/android_login', methods=['POST'])
 def android_login():
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
-    old_username = session.get('username')
     
-    if old_username and old_username.startswith('randomlyGenerated'):
-        # Fetch old data from the database
-        old_data = user_collection.find_one({'Username': old_username}) or {}
-        
-        # Prepare the new data to be updated
-        new_data = {
-            'Username': new_username,
-            'phone_number': session.get('phone_number', phone_number),  # Get from session, fallback to request data
-            'email': session.get('email', email),  # Get from session, fallback to request data
-            'isEmailVerified': session.get('isEmailVerified', isEmailVerified)  # Get from session, fallback to request data
-        }
-
-        # Merge the old and new data
-        merged_data = {**old_data, **new_data}
-
-        # Remove the _id field from merged_data to avoid duplicate key error
-        merged_data.pop('_id', None)
-        
-        # Update the MongoDB record
-        user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+    # Fetch old data from the database
+    old_data = user_collection.find_one({'Username': new_username}) or {}
     
-    # Update the session
-    session['username'] = new_username
-    session['phone_number'] = phone_number
-    session['email'] = email
-    session['isEmailVerified'] = isEmailVerified
-    session.pop('question_count', None)  # Reset question count on successful login
-    session.pop('conversation', None)  # Reset conversation on successful login
-    set_role()
-    
-    return 'Logged in as: ' + new_username, 200
+    # Prepare the new data to be updated
+    new_data = {
+        'Username': new_username,
+        'phone_number': phone_number,
+        'email': email,
+        'isEmailVerified': isEmailVerified
+    }
 
-@google.tokengetter
-def get_google_oauth_token():
-    return session.get('google_token')
+    # Merge the old and new data
+    merged_data = {**old_data, **new_data}
+
+    # Remove the _id field from merged_data to avoid duplicate key error
+    merged_data.pop('_id', None)
+    
+    # Update the MongoDB record
+    user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+    
+    # Generate JWT token
+    access_token = create_access_token(identity=new_username)
+    
+    return jsonify(status='success', message=f'Logged in as: {new_username}', access_token=access_token), 200
 
 def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
