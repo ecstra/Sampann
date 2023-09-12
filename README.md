@@ -1,7 +1,10 @@
+---
 
 ---
 # Updated API Documentation
+
 ---
+
 ## 1. Set Context API
 
 ### API Endpoint
@@ -166,7 +169,7 @@ This API refreshes the JWT token for the user.
 ### Example Usage in Flutter
 
 ```dart
-// Implement JWT refresh token logic here.
+// Check Usage of the App section
 ```
 
 ---
@@ -191,6 +194,7 @@ This API enables login functionality specifically for Android applications.
     "Content-Type": "application/json"
   }
   ```
+  
 - **Body**:
 
   ```json
@@ -252,6 +256,7 @@ This API enables Firebase-based login functionality.
     "Content-Type": "application/json"
   }
   ```
+  
 - **Body**:
 
   ```json
@@ -286,12 +291,9 @@ final response = await http.post(
 ```
 
 ---
-
 These general formats should help guide the frontend developer in making API requests to the backend.
 -----------------------------------------------------------------------------------------------------
-
 ---
-
 ## Usage of the App
 
 ### Coordinating APIs and Managing Tokens
@@ -301,36 +303,80 @@ These general formats should help guide the frontend developer in making API req
    ```dart
    headers: {"Authorization": "Bearer TEMPORARY_ACCESS_TOKEN"}
    ```
+
 2. **Single Bot Interaction for Random Users**: After setting the context, you can use the `/getBotResponse` API to interact with the bot once. This API now requires the temporary `access_token` received from the `/setContext` API for authentication.
+
 3. **User Login**: After the initial bot interaction, you can prompt the user to log in using either the `/android_login` or `/firebase_login` API. These will return a personal `access_token` that should replace the temporary one.
 
    - **Personal Access Tokens**: These are more permanent JWT tokens generated upon successful login. They are required to access the bot indefinitely.
+
 4. **Automatic Re-login and Token Refresh in Android**:
 
-   - **Caching Tokens**: Use Android's secure storage to cache the personal `access_token`. This way, the user will be auto-logged in whenever the app is opened.
-   - **Token Refresh**: If the `access_token` is near expiry, use the `/refresh_token` API to get a new `access_token` and `refresh_token`. Replace the old tokens with the new ones in secure storage.
+    - **Caching Tokens**: Use Android's secure storage to cache the personal `access_token`. This way, the user will be auto-logged in whenever the app is opened.
+  
+    - **Token Refresh**: If the `access_token` is near expiry, use the `/refresh_token` API to get a new `access_token` and `refresh_token`. Replace the old tokens with the new ones in secure storage.
 
-     ```dart
-     final response = await http.post(
-       Uri.parse('http://backend_url/refresh_token'),
-       headers: {"Authorization": "Bearer YOUR_OLD_REFRESH_TOKEN"},
-     );
-     ```
+      ```dart
+      final response = await http.post(
+        Uri.parse('http://backend_url/refresh_token'),
+        headers: {"Authorization": "Bearer YOUR_OLD_REFRESH_TOKEN"},
+      );
+      ```
+
 5. **Subsequent Bot Interactions**: Continue to use the `/getBotResponse` API for further interactions with the bot. Always use the personal `access_token` for authentication.
 
-   ```dart
-   headers: {"Authorization": "Bearer YOUR_PERSONAL_ACCESS_TOKEN"}
-   ```
+    ```dart
+    headers: {"Authorization": "Bearer YOUR_PERSONAL_ACCESS_TOKEN"}
+    ```
+
 6. **Logging Out**: Use the `/logout` API to log out and invalidate the session. Remove all stored tokens on the client side.
 
+7. **Token Refresh**: If the `access_token` is near expiry or has expired, use the `/refresh_token` API to get a new `access_token`. Replace the old `access_token` with the new one in secure storage. Here's how you can implement this in Flutter:
+
+   ```dart
+   Future<void> refreshToken() async {
+     try {
+       final response = await http.post(
+         Uri.parse('http://backend_url/refresh_token'),
+         headers: {"Authorization": "Bearer YOUR_OLD_REFRESH_TOKEN"},
+       );
+
+       if (response.statusCode == 200) {
+         final Map<String, dynamic> data = jsonDecode(response.body);
+         final String newAccessToken = data['access_token'];
+         final String newRefreshToken = data['refresh_token'];
+
+         // Store the new tokens securely
+         await secureStorage.write(key: 'access_token', value: newAccessToken);
+         await secureStorage.write(key: 'refresh_token', value: newRefreshToken);
+       } else {
+         // Handle the error according to your needs
+       }
+     } catch (e) {
+       // Handle the exception
+     }
+   }
+   ```
+
+   In this example, `secureStorage` refers to an instance of `FlutterSecureStorage`, which is a Flutter plugin for securely storing data. Make sure to add this to your `pubspec.yaml` if you haven't:
+
+   ```yaml
+   dependencies:
+     flutter_secure_storage: ^4.0.0
+   ```
+
+   You can then call `refreshToken()` whenever you detect that the `access_token` is about to expire or has already expired. This will ensure that the user remains authenticated and can continue to interact with the app without interruptions.
+
+---
 ### Important Notes:
 
 - Utilize Flutter's `flutter_secure_storage` or Android's secure storage to securely store the JWT tokens.
+  
 - Always use HTTPS in production to ensure the secure transmission of tokens and data.
+
 - Implement a global error handling mechanism. If an API call fails due to token expiration or any other reason, prompt the user to log in again.
 
 ---
-
 ## Flutter Considerations
 
 ### For Set Context API:
@@ -357,5 +403,8 @@ These general formats should help guide the frontend developer in making API req
 2. **Consistent UI**: Ensure that the UI remains consistent between the login, quiz, and chatbot pages.
 3. **Responsive Design**: Design layouts that work well on different screen sizes and orientations.
 4. **Micro-Interactions**: Add subtle animations or transitions for button clicks, page transitions, etc., to enhance user experience.
+
+---
+
 
 ---
