@@ -186,7 +186,7 @@ def set_context():
 
     # Update MongoDB
     user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'context_set': True}}, upsert=True)
-    
+    set_role()
     return jsonify(analysis_results=analysis_results, status=201)
 
 # Endpoint for getting bot response
