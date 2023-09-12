@@ -187,11 +187,11 @@ def get_bot_response():
     user_data = user_collection.find_one({"Username": username})
     if user_data:
         conversation = user_data.get('conversation', [])
-        role_content = user_data.get('role', False)
+        role_content = user_data.get('role', "False")
         username = user_data.get('Username', None)
-        if not role_content:
+        if role_content == "False":
             conversation.insert(0, {"role": "system", "content": role_context})
-            role_content.insert(True)
+            role_content.insert("True")
         if user_data.get("question_count", 0) >= 1 and username.startswith('randomlyGenerated'):
             return 'Please log in to continue', 401
     
