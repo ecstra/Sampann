@@ -222,6 +222,7 @@ def get_bot_response():
     
     if username is not None:
         dosha = get_user_data(username)
+        print(dosha)
         
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
