@@ -209,8 +209,7 @@ def get_bot_response():
 
     # Your existing GPT function to get response
     response = gpt(user_message)
-    return jsonify(response=response, status=200)ssage)  # Your existing GPT function
-    return response
+    return jsonify(response=response, status=200)
 
 @app.route('/logout')
 def logout():
