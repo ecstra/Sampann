@@ -21,6 +21,8 @@ import openai
 from pymongo import MongoClient
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 
 
@@ -267,6 +269,53 @@ def android_login():
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
     
     return jsonify(status='success', message=f'Logged in as: {new_username}'), 200
+
+@app.route('/verify_google_token', methods=['POST'])
+@jwt_required()
+def verify_google_token():
+    try:
+        # (Receive token by HTTPS POST)
+        token = request.json.get('idtoken')
+        
+        # Specify the CLIENT_ID of the app that accesses the backend:
+        CLIENT_ID = "728781754591-pqdffgcuql5q0o4d1270frs8cu80sfov.apps.googleusercontent.com"
+        
+        # Validate the token
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), CLIENT_ID)
+        
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Wrong issuer.')
+        
+        # ID token is valid. Extract the necessary information
+        google_userid = idinfo['sub']
+        email = idinfo['email']
+        name = idinfo['name']
+        username = idinfo.get('preferred_username', name)  # Using 'name' as fallback
+        phone_number = idinfo.get('phone_number', '')  # Assuming phone number exists in the token
+        
+        # Here you can update this info in your database as before
+        old_username = get_jwt_identity()  # Get the old JWT identity (randomly generated username)
+        old_data = user_collection.find_one({'Username': old_username}) or {}
+        
+        new_data = {
+            'Name': name,
+            'Username': username,
+            'Email': email,
+            'PhoneNumber': phone_number,
+            'GoogleUserID': google_userid
+        }
+        
+        merged_data = {**old_data, **new_data}
+        merged_data.pop('_id', None)
+        
+        user_collection.delete_one({'Username': old_username})
+        user_collection.update_one({'Username': username}, {'$set': merged_data}, upsert=True)
+        
+        return jsonify(status='success', message=f'Logged in as: {name}'), 200
+        
+    except ValueError:
+        # Invalid token
+        return jsonify(status='failure', message='Invalid token'), 401
 
 def gpt(question, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
