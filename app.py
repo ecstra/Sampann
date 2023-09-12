@@ -174,8 +174,8 @@ def get_user_data(username):
     else:
         return "No data found for this username."
     
-def get_or_generate_username(current_user):
-    return current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
+def get_or_generate_username(current_user, remote_addr):
+    return current_user or remote_addr
 
 # Endpoint for setting context
 @jwt_required(optional=True)
@@ -183,7 +183,7 @@ def get_or_generate_username(current_user):
 def set_context():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    username = get_or_generate_username(current_user)
+    username = get_or_generate_username(current_user, request.remote_addr)
 
     answers_to_questions = request.json.get('QandA')
     analysis_results = analyze_answers(answers_to_questions)
@@ -202,7 +202,7 @@ def set_context():
 def get_bot_response():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    username = get_or_generate_username(current_user)
+    username = get_or_generate_username(current_user, request.remote_addr)
 
     user_message = request.json.get('user_message')
 
