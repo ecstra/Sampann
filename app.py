@@ -43,7 +43,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
-role_content = f"""
+role_context = f"""
 You are an Ayurvedic doctor specialized in diabetes care. \
 You will be provided with medical queries related to diabetes. \
 Reply only if the message is Ayurvedic or Medical related. \
@@ -187,10 +187,11 @@ def get_bot_response():
     user_data = user_collection.find_one({"Username": username})
     if user_data:
         conversation = user_data.get('conversation', [])
-        role_content = user_data.get('role', None)
+        role_content = user_data.get('role', False)
         username = user_data.get('Username', None)
-        if role_content:
-            conversation.insert(0, {"role": "system", "content": role_content})
+        if not role_content:
+            conversation.insert(0, {"role": "system", "content": role_context})
+            role_content.insert(True)
         if user_data.get("question_count", 0) >= 1 and username.startswith('randomlyGenerated'):
             return 'Please log in to continue', 401
     
