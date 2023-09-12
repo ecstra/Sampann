@@ -174,14 +174,9 @@ def get_user_data(username):
     else:
         return "No data found for this username."
     
-def get_real_ip():
-    if 'X-Forwarded-For' in request.headers:
-        return request.headers.getlist("X-Forwarded-For")[0].rpartition(' ')[-1]
-    else:
-        return request.remote_addr
-
+# Function to get or generate a username
 def get_or_generate_username(current_user):
-    return current_user or get_real_ip()
+    return current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
 
 # Endpoint for setting context
 @jwt_required(optional=True)
@@ -193,14 +188,17 @@ def set_context():
 
     answers_to_questions = request.json.get('QandA')
     analysis_results = analyze_answers(answers_to_questions)
-
     set_role()
-    system_context = "Your system context here"  # Replace with the actual system context
-
     # Update MongoDB
     user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'context_set': True}}, upsert=True)
 
+    if not current_user:
+        # Generate a new JWT token if not logged in
+        access_token = create_access_token(identity=username)
+        return jsonify(analysis_results=analysis_results, access_token=access_token, status=201)
+    
     return jsonify(analysis_results=analysis_results, status=201)
+
 
 # Endpoint for getting bot response
 @jwt_required(optional=True)
@@ -217,10 +215,6 @@ def get_bot_response():
     if user_data:
         if user_data.get("question_count", 0) >= 1 and not current_user:
             return 'Please log in to continue', 401
-
-        system_context = user_data.get("system_context", "")
-    else:
-        system_context = ""
 
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
