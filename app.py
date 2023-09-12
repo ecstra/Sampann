@@ -221,8 +221,8 @@ def get_bot_response():
     user_collection.update_one({'Username': username}, {'$set': {'question_count': new_count}}, upsert=True)
 
     # Your existing GPT function to get response
-    response = gpt(user_message)  # Make sure to include system_context in your GPT function
-    return jsonify(response=response, status=200)
+    response, status_code = gpt(user_message)  # Make sure to include system_context in your GPT function
+    return jsonify(response=response, status=status_code)
 
 @app.route('/logout')
 def logout():
