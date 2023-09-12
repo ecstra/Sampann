@@ -486,7 +486,10 @@ def get_info(user_message):
     'content': f"{delimiter}{user_message}{delimiter}"},  
     ]
     category = gpt3(messages)
-    category = json.loads(category)
+    if category:
+        category = json.loads(category)
+    else:
+        category = {"primary": "None", "secondary": "None"}
     primary_category = category["primary"]
     secondary_category = category["secondary"]
     
