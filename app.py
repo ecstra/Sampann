@@ -270,6 +270,13 @@ def android_login():
     
     return jsonify(status='success', message=f'Logged in as: {new_username}'), 200
 
+@app.route('/token/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    current_user = get_jwt_identity()
+    new_token = create_access_token(identity=current_user)
+    return jsonify(access_token=new_token), 200
+
 @app.route('/verify_google_token', methods=['POST'])
 @jwt_required()
 def verify_google_token():
