@@ -192,7 +192,7 @@ def set_context():
     system_context = "Your system context here"  # Replace with the actual system context
 
     # Update MongoDB
-    user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'system_context': system_context, 'context_set': True}}, upsert=True)
+    user_collection.update_one({'Username': username}, {'$set': {'analysis_results': analysis_results, 'context_set': True}}, upsert=True)
 
     return jsonify(analysis_results=analysis_results, status=201)
 
@@ -221,7 +221,7 @@ def get_bot_response():
     user_collection.update_one({'Username': username}, {'$set': {'question_count': new_count}}, upsert=True)
 
     # Your existing GPT function to get response
-    response = gpt(user_message, system_context)  # Make sure to include system_context in your GPT function
+    response = gpt(user_message)  # Make sure to include system_context in your GPT function
     return jsonify(response=response, status=200)
 
 @app.route('/logout')
