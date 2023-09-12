@@ -174,8 +174,14 @@ def get_user_data(username):
     else:
         return "No data found for this username."
     
-def get_or_generate_username(current_user, remote_addr):
-    return current_user or remote_addr
+def get_real_ip():
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers.getlist("X-Forwarded-For")[0].rpartition(' ')[-1]
+    else:
+        return request.remote_addr
+
+def get_or_generate_username(current_user):
+    return current_user or get_real_ip()
 
 # Endpoint for setting context
 @jwt_required(optional=True)
@@ -183,7 +189,7 @@ def get_or_generate_username(current_user, remote_addr):
 def set_context():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    username = get_or_generate_username(current_user, request.remote_addr)
+    username = get_or_generate_username(current_user)
 
     answers_to_questions = request.json.get('QandA')
     analysis_results = analyze_answers(answers_to_questions)
@@ -202,7 +208,7 @@ def set_context():
 def get_bot_response():
     verify_jwt_in_request(optional=True)
     current_user = get_jwt_identity()
-    username = get_or_generate_username(current_user, request.remote_addr)
+    username = get_or_generate_username(current_user)
 
     user_message = request.json.get('user_message')
 
