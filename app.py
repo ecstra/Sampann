@@ -20,7 +20,7 @@ from openai import OpenAIError
 import openai
 from pymongo import MongoClient
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
