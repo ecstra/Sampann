@@ -20,7 +20,7 @@ from openai import OpenAIError
 import openai
 from pymongo import MongoClient
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request
 
 
 
@@ -177,7 +177,8 @@ def get_user_data(username):
 @jwt_required(optional=True)
 @app.route('/setContext', methods=['GET', 'POST'])
 def set_context():
-    current_user = get_jwt_identity()  # None if not authenticated
+    verify_jwt_in_request(optional=True)  # Manually verify JWT
+    current_user = get_jwt_identity()
     answers_to_questions = request.json.get('QandA')
     username = current_user or 'randomlyGenerated' + ''.join(choice(ascii_letters + digits) for i in range(10))
     
@@ -193,6 +194,7 @@ def set_context():
 @jwt_required(optional=True)# This allows the route to work even if JWT token is not provided
 def gpt_response():
     current_user = get_jwt_identity()  # Get the current user from the JWT token
+    verify_jwt_in_request(optional=True)  # Manually verify JWT
     user_message = request.json.get('user_message')
     question_count = request.json.get('question_count', 0)  # Get the question count from the request
 
