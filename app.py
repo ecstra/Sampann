@@ -144,18 +144,7 @@ def get_user_data(username):
     user_data = user_collection.find_one({"Username": username})
     
     if user_data:
-        vata_data = user_data.get("Vata", {})
-        pitta_data = user_data.get("Pitta", {})
-        kapha_data = user_data.get("Kapha", {})
-        
-        # Now, these variables contain the respective data
-        # You can manipulate them as you wish
-        
-        return {
-            "Vata": vata_data,
-            "Pitta": pitta_data,
-            "Kapha": kapha_data
-        }
+        return user_data.get("analysis_results", {})
         
     else:
         return "No data found for this username."
