@@ -11,6 +11,7 @@ import json
 import os
 from random import choice
 from string import ascii_letters, digits
+from datetime import timedelta
 
 # Third-party imports
 from dotenv import load_dotenv
@@ -35,7 +36,8 @@ user_collection = db['users']
 
 app = Flask(__name__)
 CORS(app)
-app.config['JWT_SECRET_KEY'] = 'your-secret-key-here'
+app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)  # set the token expiration time
 jwt = JWTManager(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -234,10 +236,24 @@ def logout():
     session.pop('question_count', None)
     return 'Logged out', 200
 
+@app.route('/refresh_token', methods=['POST'])
+@jwt_required(refresh=True)  # Requires a refresh token
+def refresh_token():
+    old_username = get_jwt_identity()  # Get the old JWT identity
+    
+    # Fetch old data from the database
+    old_data = user_collection.find_one({'Username': old_username}) or {}
+    
+    # Create new access and refresh tokens
+    new_access_token = create_access_token(identity=old_username, expires_delta=timedelta(minutes=15))
+    new_refresh_token = create_refresh_token(identity=old_username, expires_delta=timedelta(days=30))
+    
+    return jsonify(access_token=new_access_token, refresh_token=new_refresh_token), 200
+
 @app.route('/android_login', methods=['POST'])
 @jwt_required()  # JWT is now required
 def android_login():
-    old_username = get_jwt_identity()  # Get the old JWT identity (randomly generated username)
+    old_username = get_jwt_identity()  # Get the old JWT identity
     
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
