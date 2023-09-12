@@ -213,7 +213,7 @@ def get_bot_response():
     # Check user limit and system context from MongoDB
     user_data = user_collection.find_one({"Username": username})
     if user_data:
-        if user_data.get("question_count", 0) >= 1 and not current_user:
+        if user_data.get("question_count", 0) >= 1 and (not current_user or current_user.startswith('randomlyGenerated')):
             return 'Please log in to continue', 401
 
     # Update question_count in MongoDB
