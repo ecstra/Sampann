@@ -264,7 +264,8 @@ def android_login():
 
     # Check if user already exists
     old_data = user_collection.find_one({'Username': old_username}) or {}
-    isNew = 0 if old_data else 1
+    username_check = user_collection.find_one({'Username': new_username}) or {}
+    isNew = 0 if username_check else 1
     
     # Prepare the new data to be updated
     new_data = {
@@ -283,7 +284,11 @@ def android_login():
 
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
-
+    
+    # Delete the old username entry if it's different from the new one
+    if old_username != new_username:
+        user_collection.delete_one({'Username': old_username})
+        
     # Create a new access token with the new username
     new_access_token = create_access_token(identity=new_username)
 
@@ -322,7 +327,8 @@ def firebase_login():
 
     # Check if user already exists
     old_data = user_collection.find_one({'Username': old_username}) or {}
-    isNew = 0 if old_data else 1
+    username_check = user_collection.find_one({'Username': new_username}) or {}
+    isNew = 0 if username_check else 1
 
     # Prepare the new data to be updated
     new_data = {
@@ -342,6 +348,10 @@ def firebase_login():
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
 
+    # Delete the old username entry if it's different from the new one
+    if old_username != new_username:
+        user_collection.delete_one({'Username': old_username})
+        
     # Create a new access token with the new username
     new_access_token = create_access_token(identity=new_username)
 
