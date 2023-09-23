@@ -22,28 +22,26 @@ import openai
 from pymongo import MongoClient
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token, get_jwt
-
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
 
 
-
 # Local imports
 load_dotenv()
-
 client = MongoClient(os.getenv('DATABASE_URL'))
 db = client[os.getenv('DATABASE_NAME')]
 user_collection = db['users']
 
 app = Flask(__name__)
 CORS(app)
+
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)  # set the token expiration time
 jwt = JWTManager(app)
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 openai.api_key = os.getenv('OPENAI_API_KEY')
-
 
 role_context = f"""
 You are an Ayurvedic doctor specialized in diabetes care. \
@@ -302,7 +300,7 @@ def firebase_login():
 
     # Check if token has expired
     if old_username is None:
-        return jsonify(status='failure', message='Token has expired, please login again'), 401
+        old_username = new_username
 
     cred = credentials.Certificate({
     "type": os.getenv("TYPE"),
@@ -738,7 +736,6 @@ def get_info(user_message):
         return context
     
     return "There is no additional information for this query, so respond to the user's query with your own knowledge. Make it very rich in information."
-
-            
+       
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)
