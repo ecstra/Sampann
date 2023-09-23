@@ -263,7 +263,7 @@ def android_login():
     isEmailVerified = request.json.get("isEmailVerified")
 
     # Check if user already exists
-    old_data = user_collection.find_one({'Username': new_username}) or {}
+    old_data = user_collection.find_one({'Username': old_username}) or {}
     isNew = 0 if old_data else 1
     
     # Prepare the new data to be updated
@@ -321,7 +321,7 @@ def firebase_login():
     isEmailVerified = user.email_verified
 
     # Check if user already exists
-    old_data = user_collection.find_one({'Username': new_username}) or {}
+    old_data = user_collection.find_one({'Username': old_username}) or {}
     isNew = 0 if old_data else 1
 
     # Prepare the new data to be updated
