@@ -21,7 +21,7 @@ from openai import OpenAIError
 import openai
 from pymongo import MongoClient
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token, get_raw_jwt, get_jwt
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token, get_jwt
 
 import firebase_admin
 from firebase_admin import credentials
@@ -219,7 +219,7 @@ blacklisted_tokens = set()
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    jti = get_raw_jwt()['jti']
+    jti = get_jwt()['jti']
     blacklisted_tokens.add(jti)
     return jsonify(status='success', message='Logged out'), 200
 
