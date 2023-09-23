@@ -219,12 +219,14 @@ blacklisted_tokens = set()
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
+    verify_jwt_in_request(optional=True)
     jti = get_jwt()['jti']
     blacklisted_tokens.add(jti)
     return jsonify(status='success', message='Logged out'), 200
 
 @app.before_request
 def check_blacklist():
+    verify_jwt_in_request(optional=True)
     if 'Authorization' in request.headers:
         current_token = get_jwt()
         jti = current_token['jti']
