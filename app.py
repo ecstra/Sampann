@@ -21,7 +21,8 @@ from openai import OpenAIError
 import openai
 from pymongo import MongoClient
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, create_access_token, verify_jwt_in_request, create_refresh_token, get_raw_jwt, get_jwt
+
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
@@ -214,13 +215,21 @@ def get_bot_response():
     user_collection.update_one({'Username': username}, {'$set': {'conversation': conversation}}, upsert=True)
     return jsonify(response=response, status=status_code)
 
-@app.route('/logout')
+blacklisted_tokens = set()
+@app.route('/logout', methods=['POST'])
+@jwt_required()
 def logout():
-    session.pop('google_token')
-    session.pop('conversation', None)
-    session.pop('username', None)
-    session.pop('question_count', None)
-    return 'Logged out', 200
+    jti = get_raw_jwt()['jti']
+    blacklisted_tokens.add(jti)
+    return jsonify(status='success', message='Logged out'), 200
+
+@app.before_request
+def check_blacklist():
+    if 'Authorization' in request.headers:
+        current_token = get_jwt()
+        jti = current_token['jti']
+        if jti in blacklisted_tokens:
+            return jsonify(status='failure', message='Token has been blacklisted, please login again'), 401
 
 @app.route('/refresh_token', methods=['POST'])
 @jwt_required(refresh=True)  # Requires a refresh token
@@ -237,18 +246,24 @@ def refresh_token():
     return jsonify(access_token=new_access_token, refresh_token=new_refresh_token), 200
 
 @app.route('/android_login', methods=['POST'])
-@jwt_required()  # JWT is now required
+@jwt_required(optional=True)  # JWT is now optional
 def android_login():
+    verify_jwt_in_request(optional=True)
     old_username = get_jwt_identity()  # Get the old JWT identity
-
+    
+    # Check if token has expired
+    if old_username is None:
+        return jsonify(status='failure', message='Token has expired, please login again'), 401
+    
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
 
-    # Fetch old data from the database
-    old_data = user_collection.find_one({'Username': old_username}) or {}
-
+    # Check if user already exists
+    old_data = user_collection.find_one({'Username': new_username}) or {}
+    isNew = 0 if old_data else 1
+    
     # Prepare the new data to be updated
     new_data = {
         'Username': new_username,
@@ -264,22 +279,24 @@ def android_login():
     merged_data.pop('_id', None)
     merged_data.pop('Username', None)
 
-    # Remove the old record
-    user_collection.delete_one({'Username': old_username})
-
-    # Insert new record with new username
+    # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
 
     # Create a new access token with the new username
     new_access_token = create_access_token(identity=new_username)
 
-    return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
+    return jsonify(status='success', message=f'Logged in as: {new_username}', isNew=isNew, new_access_token=new_access_token), 200
 
 @app.route('/firebase_login', methods=['POST'])
-@jwt_required()  
+@jwt_required(optional=True)  # JWT is now optional
 def firebase_login():
+    verify_jwt_in_request(optional=True)
     old_username = get_jwt_identity()  # Get the old JWT identity
-    uid = request.json.get("uid")
+
+    # Check if token has expired
+    if old_username is None:
+        return jsonify(status='failure', message='Token has expired, please login again'), 401
+
     cred = credentials.Certificate({
     "type": os.getenv("TYPE"),
     "project_id": os.getenv("PROJECT_ID"),
@@ -294,14 +311,16 @@ def firebase_login():
     "universe_domain": os.getenv("UNIVERSE_DOMAIN")
     })
     default_app = firebase_admin.initialize_app(cred)
+    uid = request.json.get("uid")
     user = auth.get_user(uid)
     new_username = user.display_name
     phone_number = user.phone_number
     email = user.email
     isEmailVerified = user.email_verified
 
-    # Fetch old data from the database
-    old_data = user_collection.find_one({'Username': old_username}) or {}
+    # Check if user already exists
+    old_data = user_collection.find_one({'Username': new_username}) or {}
+    isNew = 0 if old_data else 1
 
     # Prepare the new data to be updated
     new_data = {
@@ -318,16 +337,13 @@ def firebase_login():
     merged_data.pop('_id', None)
     merged_data.pop('Username', None)
 
-    # Remove the old record
-    user_collection.delete_one({'Username': old_username})
-
-    # Insert new record with new username
+    # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
 
     # Create a new access token with the new username
     new_access_token = create_access_token(identity=new_username)
 
-    return jsonify(status='success', message=f'Logged in as: {new_username}', new_access_token=new_access_token), 200
+    return jsonify(status='success', message=f'Logged in as: {new_username}', isNew=isNew, new_access_token=new_access_token), 200
 
 def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_tokens=4000):
     """
