@@ -213,12 +213,25 @@ def get_bot_response():
     return jsonify(response=response, status=status_code)
 
 blacklisted_tokens = set()
+
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
     verify_jwt_in_request(optional=True)
     jti = get_jwt()['jti']
-    blacklisted_tokens.add(jti)
+    blacklisted_tokens.add(jti)  # Assuming blacklisted_tokens is a set that you've defined elsewhere
+    username = get_jwt_identity()
+    user_message = request.json.get('user_message')
+
+    # Check user limit and system context from MongoDB
+    user_data = user_collection.find_one({"Username": username})
+    if user_data:
+        # Option 1: Set the conversation to an empty list
+        # user_collection.update_one({'Username': username}, {'$set': {'conversation': []}})
+        
+        # Option 2: Remove the conversation field entirely
+        user_collection.update_one({'Username': username}, {'$unset': {'conversation': ""}})
+
     return jsonify(status='success', message='Logged out'), 200
 
 @app.before_request
@@ -469,7 +482,7 @@ def message_check(user_message):
     
     return True
         
-def gpt3(messages, model = "gpt-4", temperature = 0, max_tokens = 4000):
+def gpt3(messages, model = "gpt-4", temperature = 0, max_tokens = 500):
     """
     Utility function to interact with the OpenAI API.
     
