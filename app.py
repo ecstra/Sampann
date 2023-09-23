@@ -477,7 +477,7 @@ def message_check(user_message):
     
     return True
         
-def gpt3(messages, model = "gpt-3.5-turbo", temperature = 0, max_tokens = 500):
+def gpt3(messages, model = "gpt-4", temperature = 0, max_tokens = 4000):
     """
     Utility function to interact with the OpenAI API.
     
@@ -530,34 +530,177 @@ def get_info(user_message):
     The medical queries will be delimited with \
     {delimiter} characters.
     Classify each query into a primary category \
-    and a secondary category. 
+    , secondary category and a tertiary category. 
     Provide your output in json format with the \
-    keys: primary and secondary. \
+    keys: primary, secondary and tertiary. \
     If the message does not fit a category, \
-    respond with "None" for both primary and secondary.
+    respond with "None" for both primary, secondary and tertiary.
 
-    Primary categories: Diabetes Management, Diet and Nutrition, \
-    Herbal Remedies, or Lifestyle Changes.
+    Primary Categories : Physical, Financial, All Schemes, Karnataka Diabetes Government Healthcare Schemes, Karnataka Government Healthcare Schemes Up To That Point, India Government Healthcare Schemes Up To That Point
 
-    Diabetes Management secondary categories:
-    Blood sugar monitoring
-    Insulin management
-    Medication advice
+    Physical Secondary Categories:
+    Pranayama
+    Yoga Asanas
+    Mudras for Diabetes Management
+    Color Therapy
+    Seed Therapy
+    Nutrition & Diet
 
-    Diet and Nutrition secondary categories:
-    Meal planning
-    Foods to avoid
-    Nutritional supplements
+    Financial Secondary Categories:
+    Health Insurance Review
+    Budget for Medical Expenses
+    Medication Costs
+    Lifestyle Adjustments
+    Dietary Choices
+    Regular Check-Ups
+    Financial Planning
+    Track Expenses
+    Support Groups and Resources
+    Emergency Fund
 
-    Herbal Remedies secondary categories:
-    Herbal treatments
-    Ayurvedic medicines
-    Natural therapies
+    All Schemes Secondary Categories:
+    NPCDCS
+    NHM
+    PM-JAY
+    RBSK
+    MNDY
+    DDPCU
+    SHP
+    NPCB
+    IEC
 
-    Lifestyle Changes secondary categories:
-    Exercise and physical activity
-    Stress management
-    Sleep quality
+    Karnataka Diabetes Government Healthcare Schemes Secondary Categories:
+    NCD Control
+    Mukhyamantri Aarogya Bhagya Scheme
+    HWCs
+    JSSK
+    Public Awareness Campaigns
+    School Health Programs
+    Rural Health Services
+
+    Karnataka Government Healthcare Schemes Up To That Point Secondary Categories:
+    Vajpayee Arogyashree Scheme
+    Mukhyamantri Arogya Bhagya Scheme
+    RSBY
+    Arogya Sanjeevini Scheme
+    JSSK
+    KHFWS
+    HWCs
+    NTCP
+    Mukhyamantri Anila Bhagya Scheme
+    Public Health Campaigns
+
+    India Government Healthcare Schemes Up To That Point Secondary Categories:
+    PM-JAY
+    NHM
+    JSY
+    RBSK
+    PMMVY
+    NRDWP
+    NTCP
+    NVBDCP
+    NMHP
+    NACP
+    NTBCP
+    NPCBVI
+    NPCDCS
+    NOTTO
+    NPPA
+
+    Pranayama Tertiary Categories:
+    Kapalbhati Pranayama
+    Anulom Vilom Pranayama
+    Bhastrika Pranayama
+    Ujjayi Pranayama
+    Surya Bhedana
+    Bhramari
+    Sheetali Pranayama
+
+    Yoga Asanas Tertiary Categories:
+    Paschimottanasana
+    Dhanurasana
+    Ardha Matsyendrasana
+    Vrikshasana
+    Trikonasana
+    Shalabhasana
+    Setu Bandhasana
+    Ardha Halasana
+    Bhujangasana
+    Matsyasana
+    Surya Namaskar
+    Eka and dwipadothanadana
+    Janu shirashasan
+    Sarvangasana
+    Halasana
+    Vajrasana
+    Bharadwajasana
+    Balasana
+    Pavanamuktasana
+    Shavasana
+    Mashamudrasana
+    Yogamudrasana
+
+    Mudras for Diabetes Management Tertiary Categories:
+    Prana Mudra
+    Apan Vayu Mudra
+    Gyan Mudra
+    Apana Mudra
+    Rudra Mudra
+    Hrudaya mudra
+    LingaÂ mudra
+    Surya Mudra
+    Raga Bilawal
+    Raga Bhairav
+    Raga Kalyani
+    Raga Yaman
+    Raga Bhupali
+    Raga Darbari
+    Raga Madhyamavati
+    Raga Bhupeshwari
+
+    Color Therapy Tertiary Categories:
+    Blue Color
+    Yellow and Green Colors
+
+    Seed Therapy Tertiary Categories:
+    Fenugreek Seeds
+
+    Nutrition & Diet Tertiary Categories:
+    Whole Grains (Brown rice, oats, quinoa)
+    Fresh Vegetables (especially bitter vegetables)
+    Legumes (lentils, chickpeas)
+    Lean Proteins (chicken, fish, tofu)
+    Healthy Fats (avocado, nuts, seeds)
+    Fiber-rich Foods (beans, broccoli, whole fruits)
+
+    Health Insurance Review Tertiary Categories:
+
+
+    Budget for Medical Expenses Tertiary Categories:
+
+
+    Medication Costs Tertiary Categories:
+
+
+    Lifestyle Adjustments Tertiary Categories:
+
+
+    Dietary Choices Tertiary Categories:
+
+
+    Regular Check-Ups Tertiary Categories:
+
+
+    Financial Planning Tertiary Categories:
+
+
+    Track Expenses Tertiary Categories:
+
+
+    Support Groups and Resources Tertiary Categories:
+
+
+    Emergency Fund Tertiary Categories:
     """
     
     messages =  [  
@@ -566,29 +709,36 @@ def get_info(user_message):
     {'role':'user', 
     'content': f"{delimiter}{user_message}{delimiter}"},  
     ]
-    category = gpt3(messages)
-    if category:
-        category = json.loads(category)
+    
+    category_output = gpt3(messages)
+    if category_output:
+        category = json.loads(category_output)
     else:
-        category = {"primary": "None", "secondary": "None"}
-    primary_category = category["primary"]
-    secondary_category = category["secondary"]
+        category = {"primary": "None", "secondary": "None", "tertiary": "None"}
+        
+    primary_category = category.get("primary", "None")
+    secondary_category = category.get("secondary", "None")
+    tertiary_category = category.get("tertiary", "None")
     
-    def load_category_info():
-        with open("category_info.json", "r") as f:
-            return json.load(f)
+    # Load category_info from JSON file
+    with open("content_categories.json", "r") as f:
+        category_info = json.load(f)
+    
+    def get_context_by_name(context, primary, secondary, tertiary):
+        secondary_dict = context.get(primary, {})
+        tertiary_list = secondary_dict.get(secondary, [])
+        for item in tertiary_list:
+            if item.get("name") == tertiary:
+                return item
+        return None
 
-    category_info = load_category_info()
+    context = get_context_by_name(category_info, primary_category, secondary_category, tertiary_category)
     
-    def get_context_by_name(context, primary, secondary):
-        return context.get(primary, {}).get(secondary, None)
-
-    context = get_context_by_name(category_info, primary_category, secondary_category)
-    
-    if (context is not None) & (primary_category != "None"):
+    if context is not None and primary_category != "None":
         return context
     
     return "There is no additional information for this query, so respond to the user's query with your own knowledge. Make it very rich in information."
+
             
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5000)

@@ -1,33 +1,272 @@
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import auth
 
-# Initialize the default app
-cred = credentials.Certificate({
-  "type": "service_account",
-  "project_id": "sampann-398206",
-  "private_key_id": "e3581b62163be99faf5006cbca386c69357ec294",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC6PpU51Z4fgMYb\nzDUeYqktH7KdiX/hp2+LxbUzL1oXBGKaaI3kua5m/X8WvM4ff+skA/5LNi/HwhT7\nay0Ebo2BFN3tJG73YOlcUTXgbI8w9XrHTmKPfrv3Ew5M8b85E3dW9ppBRHvqXeH6\nBXu3IluqILm3y1n0rlWSfYPWZyEt519JdF3CmB2uLazFFAhN7cEteXKXWsKKa/OC\n6JIFO60+CdSQEyc9mR71Oo0S+Hz3czIW4krK817Njw2GzH08Iua9lXZvc53u0YGa\nEDGIyj/xNtmc6Vlj1FK8MiTYJHeEb2J5eis9I0bs0xyOZqbVGys98DAivqd01IRf\nTETZpq9vAgMBAAECggEABJbsOHuiJOaYezDiEjieMKV6UlWEGDx3DDu4BmXhU3Xh\nNCrlbECDIriWfCn07mPJmJ6ckp/oN4T53WQ7vMM4q3inK2PddC0oMwUxTbF/Kday\nytyMozqdSS5oCM9gRfjL1RHIpVkZsKHVosKl1NJ87clWqkfRlK0DINQE/rCV6bqi\nHD3DKvuxBRMgWO9C1ON0v5RH+N5KQu951shtE+Gkn6HulLw/lgeBaE+xLCQ9/rDc\noJ/IklkhyRJYqSL6nH9NNJUtVWGgtH8gTM1tt4kZuYjKT4kBM/eehTZ+Zyyt32+d\ndXhjLKlKAUKKD1EJY0zcwELOTEzj9gyVm/4mZhwksQKBgQDr5yJJTX5EhpG1hZJv\nwVxpxKIOtyymTRoIOPtkkkoDfxqpzc0gEpI217o3UIe30Fz8uA9HLtq7Prds+Wrt\nMr8raUXPdH3wMIYEh8xXfjWPwJblRPeMH6GGM0U4mrZcE02Qvxi/YeSfGGej0oHy\n0ASYJ0lDCdtk12KRH2w66dCL5wKBgQDKHG+oO5Ur76FyZ1r0nzoOzff05GseGx9j\nj1BFVfrvcsJup9Qp/0M7NKDphVjQGctW5fi1mZtkR1TlRVB7q+FSaVU2qfcXc9Hw\nzD6yayUNnM7mLygOGmEB+w2jN7XoEK2lLA81enpPSr5S3zoH0gHNFcVuROy6xzTR\nZQFsVTMPOQKBgHjHZASHyognJd78Plc9dqUoaZiDLDcQ7q0bD4sUYxSbNPmPRuCO\n4ZF2rf64GmSAJ7u0OQ5G7PJFUABZSueavcnqIjXu/LPHBDa5mGOLWLz668cCooN5\nhmeBRIWQoKFPuLzNOkxyQG08P4PeuW2qF1AXfSj3mP5uUCbhIbagE4gtAoGACmoW\nstOHJ0Fsz0lWHX7K7hJc8YiHoICDSI0M9NWuXYJLVIpfW16k5zsaA450ehyqJqso\n+qqUoEEwtbOxpv2/WZDF7FArxFCag87yeB0fRqlK2/+YD8n6L7DxDfUD8ZZSbE1t\n5zKNdOKEFh8cjWSb5SZ3CuyQSjuTlCqhPSTSwbkCgYBTCWJI36eGq2V2KLT8l0d3\ndq0yVhhInufASUojnVUbKOXso8VrpaZHEEnoWbRC3KUqKkUt5Apffnsk0gmWsSGD\n4l8Tn+qLhoAy7nG64ssFW/xhSPO+kCNAk/WSoB+mUVJvbSmEhiF457n8EJJUt1K9\nHuRJw2TlPzj8cfFlwsuaHQ==\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-f4u9c@sampann-398206.iam.gserviceaccount.com",
-  "client_id": "113408687994834473431",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-f4u9c%40sampann-398206.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
-)
-default_app = firebase_admin.initialize_app(cred)
+import json
+import os
 
-# Fetch the user by UID
-uid = 'ZZc3eyhmKNQlMjliMcSgYcNLW612'
-user = auth.get_user(uid)
+import openai
 
-# Print all attributes
-print(user.__dict__)
+openai.api_key = "secret"
 
-print("Username: ", user.display_name)
-print("isEmailVerified: ", user.email_verified)
+def gpt3(messages, model = "gpt-4", temperature = 0, max_tokens = 4000):
+    """
+    Utility function to interact with the OpenAI API.
+    
+    Args:
+        messages (list): A list of message objects.
+        model (str, optional): The GPT model to use. Defaults to "gpt-3.5-turbo".
+        temperature (float, optional): Controls randomness. Defaults to 0.
+        max_tokens (int, optional): Maximum number of tokens for the output. Defaults to 500.
+    
+    Returns:
+        str: The generated content.
+    
+    Variables:
+        response (dict): The raw output from the OpenAI API.
+    """
+    
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        temperature=temperature, 
+        max_tokens=max_tokens,
+    )
+    return response.choices[0].message["content"]
 
-print("Phone Number: ", user.phone_number)
-print('Email:', user.email)
+
+def get_info(user_message):
+    """
+    Classifies the user's query and fetches additional context.
+    
+    Args:
+        user_message (str): The user's query.
+    
+    Returns:
+        str: Additional information related to the user's query.
+    
+    Variables:
+        delimiter (str): Serves as a delimiter for the system message.
+        system_message_context (str): Describes the role and categories.
+        messages (list): Includes a sequence of role-based messages.
+        category (dict): Output from the GPT model indicating the primary and secondary categories.
+        primary_category (str): Extracted primary category.
+        secondary_category (str): Extracted secondary category.
+        category_info (dict): Loaded from a JSON file, contains additional context.
+        context (str): The additional information related to the user's query.
+    """
+    
+    delimiter = "#####"
+    system_message_context = f"""
+    You are an Ayurvedic doctor specialized in diabetes care. \
+    You will be provided with medical queries related to diabetes. \
+    The medical queries will be delimited with \
+    {delimiter} characters.
+    Classify each query into a primary category \
+    , secondary category and a tertiary category. 
+    Provide your output in json format with the \
+    keys: primary, secondary and tertiary. \
+    If the message does not fit a category, \
+    respond with "None" for both primary, secondary and tertiary.
+
+    Primary Categories : Physical, Financial, All Schemes, Karnataka Diabetes Government Healthcare Schemes, Karnataka Government Healthcare Schemes Up To That Point, India Government Healthcare Schemes Up To That Point
+
+    Physical Secondary Categories:
+    Pranayama
+    Yoga Asanas
+    Mudras for Diabetes Management
+    Color Therapy
+    Seed Therapy
+    Nutrition & Diet
+
+    Financial Secondary Categories:
+    Health Insurance Review
+    Budget for Medical Expenses
+    Medication Costs
+    Lifestyle Adjustments
+    Dietary Choices
+    Regular Check-Ups
+    Financial Planning
+    Track Expenses
+    Support Groups and Resources
+    Emergency Fund
+
+    All Schemes Secondary Categories:
+    NPCDCS
+    NHM
+    PM-JAY
+    RBSK
+    MNDY
+    DDPCU
+    SHP
+    NPCB
+    IEC
+
+    Karnataka Diabetes Government Healthcare Schemes Secondary Categories:
+    NCD Control
+    Mukhyamantri Aarogya Bhagya Scheme
+    HWCs
+    JSSK
+    Public Awareness Campaigns
+    School Health Programs
+    Rural Health Services
+
+    Karnataka Government Healthcare Schemes Up To That Point Secondary Categories:
+    Vajpayee Arogyashree Scheme
+    Mukhyamantri Arogya Bhagya Scheme
+    RSBY
+    Arogya Sanjeevini Scheme
+    JSSK
+    KHFWS
+    HWCs
+    NTCP
+    Mukhyamantri Anila Bhagya Scheme
+    Public Health Campaigns
+
+    India Government Healthcare Schemes Up To That Point Secondary Categories:
+    PM-JAY
+    NHM
+    JSY
+    RBSK
+    PMMVY
+    NRDWP
+    NTCP
+    NVBDCP
+    NMHP
+    NACP
+    NTBCP
+    NPCBVI
+    NPCDCS
+    NOTTO
+    NPPA
+
+    Pranayama Tertiary Categories:
+    Kapalbhati Pranayama
+    Anulom Vilom Pranayama
+    Bhastrika Pranayama
+    Ujjayi Pranayama
+    Surya Bhedana
+    Bhramari
+    Sheetali Pranayama
+
+    Yoga Asanas Tertiary Categories:
+    Paschimottanasana
+    Dhanurasana
+    Ardha Matsyendrasana
+    Vrikshasana
+    Trikonasana
+    Shalabhasana
+    Setu Bandhasana
+    Ardha Halasana
+    Bhujangasana
+    Matsyasana
+    Surya Namaskar
+    Eka and dwipadothanadana
+    Janu shirashasan
+    Sarvangasana
+    Halasana
+    Vajrasana
+    Bharadwajasana
+    Balasana
+    Pavanamuktasana
+    Shavasana
+    Mashamudrasana
+    Yogamudrasana
+
+    Mudras for Diabetes Management Tertiary Categories:
+    Prana Mudra
+    Apan Vayu Mudra
+    Gyan Mudra
+    Apana Mudra
+    Rudra Mudra
+    Hrudaya mudra
+    LingaÂ mudra
+    Surya Mudra
+    Raga Bilawal
+    Raga Bhairav
+    Raga Kalyani
+    Raga Yaman
+    Raga Bhupali
+    Raga Darbari
+    Raga Madhyamavati
+    Raga Bhupeshwari
+
+    Color Therapy Tertiary Categories:
+    Blue Color
+    Yellow and Green Colors
+
+    Seed Therapy Tertiary Categories:
+    Fenugreek Seeds
+
+    Nutrition & Diet Tertiary Categories:
+    Whole Grains (Brown rice, oats, quinoa)
+    Fresh Vegetables (especially bitter vegetables)
+    Legumes (lentils, chickpeas)
+    Lean Proteins (chicken, fish, tofu)
+    Healthy Fats (avocado, nuts, seeds)
+    Fiber-rich Foods (beans, broccoli, whole fruits)
+
+    Health Insurance Review Tertiary Categories:
+
+
+    Budget for Medical Expenses Tertiary Categories:
+
+
+    Medication Costs Tertiary Categories:
+
+
+    Lifestyle Adjustments Tertiary Categories:
+
+
+    Dietary Choices Tertiary Categories:
+
+
+    Regular Check-Ups Tertiary Categories:
+
+
+    Financial Planning Tertiary Categories:
+
+
+    Track Expenses Tertiary Categories:
+
+
+    Support Groups and Resources Tertiary Categories:
+
+
+    Emergency Fund Tertiary Categories:
+    """
+    
+    messages =  [  
+    {'role':'system', 
+    'content': system_message_context},    
+    {'role':'user', 
+    'content': f"{delimiter}{user_message}{delimiter}"},  
+    ]
+    
+    category_output = gpt3(messages)
+    if category_output:
+        category = json.loads(category_output)
+    else:
+        category = {"primary": "None", "secondary": "None", "tertiary": "None"}
+        
+    primary_category = category.get("primary", "None")
+    secondary_category = category.get("secondary", "None")
+    tertiary_category = category.get("tertiary", "None")
+    
+    # Load category_info from JSON file
+    with open("content_categories.json", "r") as f:
+        category_info = json.load(f)
+    
+    def get_context_by_name(context, primary, secondary, tertiary):
+        secondary_dict = context.get(primary, {})
+        tertiary_list = secondary_dict.get(secondary, [])
+        for item in tertiary_list:
+            if item.get("name") == tertiary:
+                return item
+        return None
+
+    context = get_context_by_name(category_info, primary_category, secondary_category, tertiary_category)
+    
+    if context is not None and primary_category != "None":
+        return context
+    
+    return "There is no additional information for this query, so respond to the user's query with your own knowledge. Make it very rich in information."
+
+print(get_info("Health Insurance Review"))
