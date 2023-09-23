@@ -199,6 +199,7 @@ def get_bot_response():
     
     if username is not None:
         dosha = get_user_data(username)
+
         
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
@@ -213,24 +214,12 @@ def get_bot_response():
     return jsonify(response=response, status=status_code)
 
 blacklisted_tokens = set()
-
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
     verify_jwt_in_request(optional=True)
     jti = get_jwt()['jti']
-    blacklisted_tokens.add(jti)  # Assuming blacklisted_tokens is a set that you've defined elsewhere
-    username = get_jwt_identity()
-
-    # Check user limit and system context from MongoDB
-    user_data = user_collection.find_one({"Username": username})
-    if user_data:
-        # Option 1: Set the conversation to an empty list
-        # user_collection.update_one({'Username': username}, {'$set': {'conversation': []}})
-        
-        # Option 2: Remove the conversation field entirely
-        user_collection.update_one({'Username': username}, {'$unset': {'conversation': ""}})
-
+    blacklisted_tokens.add(jti)
     return jsonify(status='success', message='Logged out'), 200
 
 @app.before_request
@@ -293,7 +282,6 @@ def android_login():
 
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
-    user_collection.update_one({'Username': new_username}, {'$unset': {'conversation': ""}})
     
     # Delete the old username entry if it's different from the new one
     if old_username != new_username:
@@ -357,7 +345,6 @@ def firebase_login():
 
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
-    user_collection.update_one({'Username': new_username}, {'$unset': {'conversation': ""}})
 
     # Delete the old username entry if it's different from the new one
     if old_username != new_username:
@@ -413,7 +400,6 @@ def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_t
         max_tokens=max_tokens,
         messages=conversation
     )
-
         
     answer = response['choices'][0]['message']['content']
     return answer, 200
