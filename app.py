@@ -253,15 +253,15 @@ def android_login():
     verify_jwt_in_request(optional=True)
     old_username = get_jwt_identity()  # Get the old JWT identity
     
-    # Check if token has expired
-    if old_username is None:
-        return jsonify(status='failure', message='Token has expired, please login again'), 401
-    
     new_username = request.json.get("username")
     phone_number = request.json.get("phonenumber")
     email = request.json.get("email")
     isEmailVerified = request.json.get("isEmailVerified")
 
+    # Check if token has expired
+    if old_username is None:
+        old_username = new_username
+    
     # Check if user already exists
     old_data = user_collection.find_one({'Username': old_username}) or {}
     username_check = user_collection.find_one({'Username': new_username}) or {}
