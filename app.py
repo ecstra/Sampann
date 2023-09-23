@@ -221,7 +221,6 @@ def logout():
     jti = get_jwt()['jti']
     blacklisted_tokens.add(jti)  # Assuming blacklisted_tokens is a set that you've defined elsewhere
     username = get_jwt_identity()
-    user_message = request.json.get('user_message')
 
     # Check user limit and system context from MongoDB
     user_data = user_collection.find_one({"Username": username})
@@ -294,6 +293,7 @@ def android_login():
 
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+    user_collection.update_one({'Username': new_username}, {'$unset': {'conversation': ""}})
     
     # Delete the old username entry if it's different from the new one
     if old_username != new_username:
@@ -357,6 +357,7 @@ def firebase_login():
 
     # Update or insert new record with new username
     user_collection.update_one({'Username': new_username}, {'$set': merged_data}, upsert=True)
+    user_collection.update_one({'Username': new_username}, {'$unset': {'conversation': ""}})
 
     # Delete the old username entry if it's different from the new one
     if old_username != new_username:
