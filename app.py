@@ -199,7 +199,6 @@ def get_bot_response():
     
     if username is not None:
         dosha = get_user_data(username)
-        print(dosha)
         
     # Update question_count in MongoDB
     new_count = user_data.get("question_count", 0) + 1 if user_data else 1
@@ -393,19 +392,14 @@ def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_t
         return "I apologise, but I'm unable to respond to that because of limitations on when I am authorised to do so.", 200
     
     conversation.append({"role": "user", "content": user_message_for_model})
-    try:
-        response = openai.ChatCompletion.create(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            messages=conversation
-        )
-    except OpenAIError as e:
-        if 'rate limit' in str(e):
-            return 'Rate limit exceeded. Please try again after a few seconds.', 429
-        else:
-            return 'An error occurred. Please try again later.', 451
-            
+
+    response = openai.ChatCompletion.create(
+        model=model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        messages=conversation
+    )
+
         
     answer = response['choices'][0]['message']['content']
     return answer, 200
