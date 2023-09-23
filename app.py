@@ -368,7 +368,7 @@ def firebase_login():
 
     return jsonify(status='success', message=f'Logged in as: {new_username}', isNew=isNew, new_access_token=new_access_token), 200
 
-def gpt(user_data, question, conversation, model="gpt-4-32k", temperature=0.7, max_tokens=32000):
+def gpt(user_data, question, conversation, model="gpt-4", temperature=0.7, max_tokens=8000):
     """
     Handles the main conversation logic with the user.
     
